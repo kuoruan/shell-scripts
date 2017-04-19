@@ -16,9 +16,9 @@ Environment="LKL_HIJACK_NET_IP=10.0.0.2"
 Environment="LKL_HIJACK_NET_NETMASK_LEN=24"
 Environment="LKL_HIJACK_NET_GATEWAY=10.0.0.1"
 Environment="LKL_HIJACK_OFFLOAD=0x8883"
-ExecStartPre=${PREFIX}/sbin/${BASENAME} -f $CONFIG -c -q
-ExecStart=${PREFIX}/sbin/${BASENAME}-systemd-wrapper -f $CONFIG -p $PIDFILE
-ExecReload=${PREFIX}/sbin/${BASENAME} -f $CONFIG -c -q
+ExecStartPre=${PREFIX}/sbin/haproxy -f $CONFIG -c -q
+ExecStart=${PREFIX}/sbin/haproxy-systemd-wrapper -f $CONFIG -p $PIDFILE
+ExecReload=${PREFIX}/sbin/haproxy -f $CONFIG -c -q
 ExecReload=/bin/kill -USR2 $MAINPID
 KillMode=mixed
 Restart=always

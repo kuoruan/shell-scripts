@@ -16,9 +16,9 @@ EOF
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Haproxy 服务名称
-HAPROXY_BASENAME='haproxy-lkl'
+SERVICE_NAME='haproxy-lkl'
 # Haproxy 默认安装路径，修改之后需要同时修改服务启动文件
-HAPROXY_DIR="/usr/local/$HAPROXY_BASENAME"
+HAPROXY_DIR="/usr/local/$SERVICE_NAME"
 
 BASE_URL='https://raw.githubusercontent.com/kuoruan/shell-scripts/master/ovz-bbr'
 HAPROXY_BIN_URL="${BASE_URL}/bin/haproxy.linux2628_x86_64"
@@ -311,14 +311,14 @@ install_haproxy() {
 	useradd -U -s '/usr/sbin/nologin' -d '/nonexistent' haproxy 2>/dev/null
 	set +x
 
-	local haproxy_bin="${HAPROXY_DIR}/sbin/${HAPROXY_BASENAME}"
+	local haproxy_bin="${HAPROXY_DIR}/sbin/haproxy"
 
 	download_file "$HAPROXY_BIN_URL" "$haproxy_bin"
 	chmod +x "$haproxy_bin"
 
 	check_haproxy_bin() {
 		local bin=$1
-		if ! $bin -v | grep -q 'HA-Proxy' 2>/dev/null; then
+		if ! $bin -v 2>/dev/null | grep -q 'HA-Proxy'; then
 			cat >&2 <<-EOF
 			HAproxy 可执行文件无法正常运行，请联系脚本作者，寻求支持。
 			EOF
@@ -339,7 +339,7 @@ install_haproxy() {
 	}
 
 	if command_exists systemctl; then
-		local haproxy_bin_wrapper="${HAPROXY_DIR}/sbin/${HAPROXY_BASENAME}-systemd-wrapper"
+		local haproxy_bin_wrapper="${HAPROXY_DIR}/sbin/haproxy-systemd-wrapper"
 		download_file "$HAPROXY_BIN_WRAPPER_URL" "$haproxy_bin_wrapper"
 
 		chmod +x "$haproxy_bin_wrapper"
@@ -407,7 +407,7 @@ install_lkl_lib() {
 		download_file "$LKL_LIB_URL" "$lib_file"
 		if command_exists md5sum; then
 			set -x
-			echo "${HAPROXY_MD5} ${lib_file}" | md5sum -c
+			echo "${LKL_LIB_MD5} ${lib_file}" | md5sum -c
 			set +x
 
 			if [ "$?" -ne 0 ]; then
@@ -430,7 +430,7 @@ install_lkl_lib() {
 }
 
 set_network() {
-	local ip_forword="$(sysctl -n 'net.ipv4.ip_forward 2>/dev/null')"
+	local ip_forword="$(sysctl -n 'net.ipv4.ip_forward' 2>/dev/null)"
 	if [ -z "$ip_forword" -o "$ip_forword" -ne "1" ]; then
 		(
 			set -x
@@ -536,17 +536,17 @@ end_install() {
 	原端口: ${HAPROXY_TARGET_PORT}
 	EOF
 	if command_exists systemctl; then
-		systemctl start "$HAPROXY_BASENAME"
+		systemctl start "$SERVICE_NAME"
 		cat >&2 <<-EOF
 
-		请使用 systemctl {start|stop|restart} ${HAPROXY_BASENAME}
+		请使用 systemctl {start|stop|restart} ${SERVICE_NAME}
 		来 {开启|关闭|重启} 服务
 		EOF
 	else
-		service "$HAPROXY_BASENAME" start
+		service "$SERVICE_NAME" start
 		cat >&2 <<-EOF
 
-		请使用 service ${HAPROXY_BASENAME} {start|stop|restart}
+		请使用 service ${SERVICE_NAME} {start|stop|restart}
 		来 {开启|关闭|重启} 服务
 		EOF
 	fi
@@ -567,14 +567,11 @@ do_install() {
 	check_ldd
 	check_arch
 	get_os_info
-
 	set_config
-
 	install_deps
 	install_haproxy
 	install_lkl_lib
 	set_network
-	start_haproxy
 	end_install
 }
 

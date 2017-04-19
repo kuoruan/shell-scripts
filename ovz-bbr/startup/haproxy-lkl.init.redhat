@@ -29,13 +29,13 @@ fi
 
 BASENAME=haproxy-lkl
 PREFIX=/usr/local/$BASENAME
-BIN=${PREFIX}/sbin/$BASENAME
+BIN=${PREFIX}/sbin/haproxy
 
 CFG=${PREFIX}/etc/haproxy.cfg
 [ -f $CFG ] || exit 1
 
 PIDFILE=/var/run/${BASENAME}.pid
-LOCKFILE=/var/lock/subsys/$BASENAME
+LOCKFILE=/var/run/$BASENAME.lock
 
 RETVAL=0
 
@@ -69,7 +69,7 @@ set_environment() {
 
 stop() {
   echo -n "Shutting down $BASENAME: "
-  killproc $BASENAME -USR1
+  killproc -p $PIDFILE $BASENAME -USR1
   RETVAL=$?
   echo
   [ $RETVAL -eq 0 ] && rm -f $LOCKFILE

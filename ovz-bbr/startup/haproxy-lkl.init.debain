@@ -14,7 +14,7 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 BASENAME=haproxy-lkl
 PREFIX=/usr/local/$BASENAME
-HAPROXY=${PREFIX}/sbin/$BASENAME
+HAPROXY=${PREFIX}/sbin/haproxy
 
 PIDFILE=/var/run/${BASENAME}.pid
 CONFIG=${PREFIX}/etc/haproxy.cfg
