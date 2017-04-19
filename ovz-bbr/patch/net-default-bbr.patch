@@ -1,0 +1,63 @@
+diff --git a/net/Kconfig b/net/Kconfig
+index a29bb4b..7ca15d3 100644
+--- a/net/Kconfig
++++ b/net/Kconfig
+@@ -4,6 +4,7 @@
+ 
+ menuconfig NET
+ 	bool "Networking support"
++	default y
+ 	select NLATTR
+ 	select GENERIC_NET_UTILS
+ 	select BPF
+diff --git a/net/ipv4/Kconfig b/net/ipv4/Kconfig
+index 6e7baaf..dd8ba41 100644
+--- a/net/ipv4/Kconfig
++++ b/net/ipv4/Kconfig
+@@ -453,6 +453,7 @@ config INET_DIAG_DESTROY
+ 
+ menuconfig TCP_CONG_ADVANCED
+ 	bool "TCP: advanced congestion control"
++	default y
+ 	---help---
+ 	  Support for selection of various TCP congestion control
+ 	  modules.
+@@ -650,7 +651,7 @@ config TCP_CONG_CDG
+ 
+ config TCP_CONG_BBR
+ 	tristate "BBR TCP"
+-	default n
++	default y
+ 	---help---
+ 
+ 	BBR (Bottleneck Bandwidth and RTT) TCP congestion control aims to
+@@ -665,7 +666,7 @@ config TCP_CONG_BBR
+ 
+ choice
+ 	prompt "Default TCP congestion control"
+-	default DEFAULT_CUBIC
++	default DEFAULT_BBR
+ 	help
+ 	  Select the TCP congestion control that will be used by default
+ 	  for all connections.
+@@ -724,7 +725,7 @@ config DEFAULT_TCP_CONG
+ 	default "dctcp" if DEFAULT_DCTCP
+ 	default "cdg" if DEFAULT_CDG
+ 	default "bbr" if DEFAULT_BBR
+-	default "cubic"
++	default "bbr"
+ 
+ config TCP_MD5SIG
+ 	bool "TCP: MD5 Signature Option support (RFC2385)"
+diff --git a/net/sched/Kconfig b/net/sched/Kconfig
+index 87956a7..aa2c576 100644
+--- a/net/sched/Kconfig
++++ b/net/sched/Kconfig
+@@ -275,6 +275,7 @@ config NET_SCH_FQ_CODEL
+ 
+ config NET_SCH_FQ
+ 	tristate "Fair Queue"
++	default y
+ 	help
+ 	  Say Y here if you want to use the FQ packet scheduling algorithm.
+ 

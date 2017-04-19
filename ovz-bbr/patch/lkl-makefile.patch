@@ -1,0 +1,13 @@
+diff --git a/tools/lkl/Makefile b/tools/lkl/Makefile
+index 08f73f8..c8a5231 100644
+--- a/tools/lkl/Makefile
++++ b/tools/lkl/Makefile
+@@ -139,7 +139,7 @@ $(OUTPUT)%-in.o: $(OUTPUT)lib/lkl.o FORCE
+ 	$(Q)$(MAKE) -f $(srctree)/tools/build/Makefile.build dir=$(patsubst %/,%,$(dir $*)) obj=$(notdir $*)
+ 
+ $(OUTPUT)lib/lkl.o:
+-	$(Q)$(MAKE) -C ../.. ARCH=lkl $(KOPT) defconfig
++	$(Q)$(MAKE) -C ../.. ARCH=lkl $(KOPT) olddefconfig
+ 	$(Q)$(MAKE) -C ../.. ARCH=lkl $(KOPT) install INSTALL_PATH=$(OUTPUT)
+ 
+ $(OUTPUT)liblkl.a: $(OUTPUT)lib/lkl-in.o $(OUTPUT)lib/lkl.o

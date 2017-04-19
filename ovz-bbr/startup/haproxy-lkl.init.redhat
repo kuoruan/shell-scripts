@@ -1,0 +1,147 @@
+#!/bin/sh
+#
+# haproxy-lkl
+#
+# chkconfig: - 85 15
+# description: HA-Proxy is a TCP/HTTP reverse proxy which is particularly suited \
+#              for high availability environments.
+# processname: haproxy-lkl
+# config: /usr/local/haproxy-lkl/etc/haproxy.cfg
+# pidfile: /var/run/haproxy-lkl.pid
+
+# Script Author: Simon Matter <simon.matter@invoca.ch>
+# Version: 2004060600
+
+# Source function library.
+if [ -f /etc/init.d/functions ]; then
+  . /etc/init.d/functions
+elif [ -f /etc/rc.d/init.d/functions ] ; then
+  . /etc/rc.d/init.d/functions
+else
+  exit 0
+fi
+
+# Source networking configuration.
+. /etc/sysconfig/network
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 0
+
+BASENAME=haproxy-lkl
+PREFIX=/usr/local/$BASENAME
+BIN=${PREFIX}/sbin/$BASENAME
+
+CFG=${PREFIX}/etc/haproxy.cfg
+[ -f $CFG ] || exit 1
+
+PIDFILE=/var/run/${BASENAME}.pid
+LOCKFILE=/var/lock/subsys/$BASENAME
+
+RETVAL=0
+
+start() {
+  quiet_check
+  if [ $? -ne 0 ]; then
+    echo "Errors found in configuration file, check it with '$BASENAME check'."
+    return 1
+  fi
+
+  echo -n "Starting $BASENAME: "
+	set_environment \
+  daemon $BIN -D -f $CFG -p $PIDFILE
+  RETVAL=$?
+  echo
+  [ $RETVAL -eq 0 ] && touch $LOCKFILE
+  return $RETVAL
+}
+
+set_environment() {
+	export LD_PRELOAD="${PREFIX}/lib64/liblkl-hijack.so"
+	export LKL_HIJACK_NET_QDISC='root|fq'
+	export LKL_HIJACK_SYSCTL='net.ipv4.tcp_wmem=4096 65536 67108864'
+	export LKL_HIJACK_NET_IFTYPE=tap
+	export LKL_HIJACK_NET_IFPARAMS=lkl
+	export LKL_HIJACK_NET_IP=10.0.0.2
+	export LKL_HIJACK_NET_NETMASK_LEN=24
+	export LKL_HIJACK_NET_GATEWAY=10.0.0.1
+	export LKL_HIJACK_OFFLOAD=0x8883
+}
+
+stop() {
+  echo -n "Shutting down $BASENAME: "
+  killproc $BASENAME -USR1
+  RETVAL=$?
+  echo
+  [ $RETVAL -eq 0 ] && rm -f $LOCKFILE
+  [ $RETVAL -eq 0 ] && rm -f $PIDFILE
+  return $RETVAL
+}
+
+restart() {
+  quiet_check
+  if [ $? -ne 0 ]; then
+    echo "Errors found in configuration file, check it with '$BASENAME check'."
+    return 1
+  fi
+  stop
+  start
+}
+
+reload() {
+  if ! [ -s $PIDFILE ]; then
+    return 0
+  fi
+
+  quiet_check
+  if [ $? -ne 0 ]; then
+    echo "Errors found in configuration file, check it with '$BASENAME check'."
+    return 1
+  fi
+  $BIN -D -f $CFG -p $PIDFILE -sf $(cat $PIDFILE)
+}
+
+check() {
+  $BIN -c -q -V -f $CFG
+}
+
+quiet_check() {
+  $BIN -c -q -f $CFG
+}
+
+rhstatus() {
+  status $BASENAME
+}
+
+condrestart() {
+  [ -e $LOCKFILE ] && restart || :
+}
+
+# See how we were called.
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  restart)
+    restart
+    ;;
+  reload)
+    reload
+    ;;
+  condrestart)
+    condrestart
+    ;;
+  status)
+    rhstatus
+    ;;
+  check)
+    check
+    ;;
+  *)
+    echo $"Usage: $BASENAME {start|stop|restart|reload|condrestart|status|check}"
+    exit 1
+esac
+
+exit $?
