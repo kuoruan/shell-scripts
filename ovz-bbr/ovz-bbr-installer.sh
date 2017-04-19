@@ -53,7 +53,8 @@ command_exists() {
 }
 
 check_root() {
-	if [ $EUID -ne 0 ]; then
+	local user="$(id -un 2>/dev/null || true)"
+	if [ "$user" != "root" ]; then
 		cat >&2 <<-'EOF'
 		权限错误, 请使用 root 用户运行此脚本!
 		EOF
@@ -222,7 +223,7 @@ get_os_info() {
 install_deps() {
 	case "$lsb_dist" in
 		ubuntu|debian|raspbian)
-			did_apt_get_update=
+			local did_apt_get_update=
 			apt_get_update() {
 				if [ -z "$did_apt_get_update" ]; then
 					( set -x; sleep 3; apt-get update )
@@ -295,7 +296,7 @@ download_file() {
 	local file=$2
 
 	(set -x; wget -O "$file" --no-check-certificate "$url")
-	if [ "$?" -ne 0 ]; then
+	if [ "$?" != "0" ]; then
 		cat >&2 <<-EOF
 		一些文件下载失败！安装脚本需要能访问到 github.com，请检查服务器网络。
 		注意: 一些国内服务器可能无法正常访问 github.com。
@@ -331,12 +332,6 @@ install_haproxy() {
 
 	local haproxy_startup_file=
 	local haproxy_startup_file_url=
-	download_startup_script() {
-		if [ -n "$haproxy_startup_file" -a -n "$haproxy_startup_file_url" ]; then
-			download_file "$haproxy_start_script_url" "$haproxy_start_script"
-			chmod +x "$haproxy_start_script"
-		fi
-	}
 
 	if command_exists systemctl; then
 		local haproxy_bin_wrapper="${HAPROXY_DIR}/sbin/haproxy-systemd-wrapper"
@@ -348,8 +343,11 @@ install_haproxy() {
 		haproxy_start_script="/lib/systemd/system/${SERVICE_NAME}.service"
 		haproxy_start_script_url="${HAPROXY_SYSTEMD_FILE_URL}"
 
-		download_startup_script
-		set -x; systemctl enable "${SERVICE_NAME}.service"
+		download_file "$haproxy_start_script_url" "$haproxy_start_script"
+		(
+			set -x
+			systemctl enable "${SERVICE_NAME}.service"
+		)
 
 	elif command_exists service; then
 		haproxy_start_script="/etc/init.d/${SERVICE_NAME}"
@@ -357,13 +355,15 @@ install_haproxy() {
 			ubuntu|debian|raspbian)
 				haproxy_start_script_url="${HAPROXY_SERVICE_FILE_DEBIAN_URL}"
 
-				download_startup_script
+				download_file "$haproxy_start_script_url" "$haproxy_start_script"
+				chmod +x "$haproxy_start_script"
 				(set -x; update-rc.d -f "${SERVICE_NAME}" defaults)
 			;;
 			fedora|centos|redhat|oraclelinux|photon)
 				haproxy_start_script_url="${HAPROXY_SERVICE_FILE_REDHAT_URL}"
 
-				download_startup_script
+				download_file "$haproxy_start_script_url" "$haproxy_start_script"
+				chmod +x "$haproxy_start_script"
 				(
 					set -x
 					chkconfig --add "${SERVICE_NAME}"
@@ -410,7 +410,7 @@ install_lkl_lib() {
 			echo "${LKL_LIB_MD5} ${lib_file}" | md5sum -c
 			set +x
 
-			if [ "$?" -ne 0 ]; then
+			if [ "$?" != "0" ]; then
 				if [ "$retry" -lt "3" ]; then
 					echo "文件校验失败！3 秒后重新下载..."
 					let retry++
@@ -431,7 +431,7 @@ install_lkl_lib() {
 
 set_network() {
 	local ip_forword="$(sysctl -n 'net.ipv4.ip_forward' 2>/dev/null)"
-	if [ -z "$ip_forword" -o "$ip_forword" -ne "1" ]; then
+	if [ -z "$ip_forword" -o "$ip_forword" != "1" ]; then
 		(
 			set -x
 			echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
@@ -530,6 +530,8 @@ set_config() {
 }
 
 end_install() {
+	clear
+
 	cat >&2 <<-EOF
 	BBR 安装完成！
 	新端口: ${HAPROXY_LISTEN_PORT}
