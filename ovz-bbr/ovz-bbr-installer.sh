@@ -15,17 +15,17 @@ EOF
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# Haproxy 服务名称
+# Haproxy-lkl 服务名称
 SERVICE_NAME='haproxy-lkl'
-# Haproxy 默认安装路径，修改之后需要同时修改服务启动文件
-HAPROXY_DIR="/usr/local/$SERVICE_NAME"
+# Haproxy-lkl 默认安装路径，修改之后需要同时修改服务启动文件
+HAPROXY_LKL_DIR="/usr/local/$SERVICE_NAME"
 
 BASE_URL='https://raw.githubusercontent.com/kuoruan/shell-scripts/master/ovz-bbr'
 HAPROXY_BIN_URL="${BASE_URL}/bin/haproxy.linux2628_x86_64"
-HAPROXY_BIN_WRAPPER_URL="${BASE_URL}/bin/haproxy-systemd-wrapper.linux2628_x86_64"
-HAPROXY_SERVICE_FILE_DEBIAN_URL="${BASE_URL}/startup/haproxy-lkl.init.debain"
-HAPROXY_SERVICE_FILE_REDHAT_URL="${BASE_URL}/startup/haproxy-lkl.init.redhat"
-HAPROXY_SYSTEMD_FILE_URL="${BASE_URL}/startup/haproxy-lkl.systemd"
+HAPROXY_LKL_BIN_URL="${BASE_URL}/bin/haproxy-lkl.sh"
+HAPROXY_LKL_SERVICE_FILE_DEBIAN_URL="${BASE_URL}/startup/haproxy-lkl.init.debain"
+HAPROXY_LKL_SERVICE_FILE_REDHAT_URL="${BASE_URL}/startup/haproxy-lkl.init.redhat"
+HAPROXY_LKL_SYSTEMD_FILE_URL="${BASE_URL}/startup/haproxy-lkl.systemd"
 LKL_LIB_URL="${BASE_URL}/lib64/liblkl-hijack.so-20170419"
 LKL_LIB_MD5='08cccfcdfd106c76b39bc2af783d1c4e'
 
@@ -49,7 +49,7 @@ EOF
 
 
 command_exists() {
-	command -v "$@" > /dev/null 2>&1
+	command -v "$@" >/dev/null 2>&1
 }
 
 check_root() {
@@ -75,13 +75,13 @@ check_ovz() {
 check_ldd() {
 	local ldd_version="$(ldd --version | grep 'ldd' | rev | cut -d ' ' -f1 | rev)"
 	if [ -n "$ldd_version" ]; then
-		if [ "${ldd_version%.*}" -eq "2" ] && [ "${ldd_version#*.}" \< "14" ] || \
+		if [ "${ldd_version%.*}" -eq "2" -a "${ldd_version#*.}" -lt "14" ] || \
 		[ "${ldd_version%.*}" -lt "2" ]; then
 			cat >&2 <<-EOF
 			当前服务器的 glibc 版本为 $ldd_version。
-			最低版本需求 2.14，低于这个版本可能无法正常使用。
+			最低版本需求 2.14，低于这个版本无法正常使用。
+			请先更新 glibc 之后再运行脚本。
 			EOF
-
 			exit 1
 	  fi
 	else
@@ -221,6 +221,9 @@ get_os_info() {
 }
 
 install_deps() {
+	ip_support_tuntap() {
+		command_exists ip && ip tuntap 2>/dev/null
+	}
 	case "$lsb_dist" in
 		ubuntu|debian|raspbian)
 			local did_apt_get_update=
@@ -245,6 +248,11 @@ install_deps() {
 				apt_get_update
 				( set -x; sleep 3; apt-get install -y -q iptables )
 			fi
+
+			if ! ip_support_tuntap; then
+				apt_get_update
+				( set -x; sleep 3; apt-get install -y -q uml-utilities )
+			fi
 		;;
 		fedora|centos|redhat|oraclelinux|photon)
 			if [ "$lsb_dist" = "fedora" ] && [ "$dist_version" -ge "22" ]; then
@@ -253,11 +261,15 @@ install_deps() {
 				fi
 
 				if ! command_exists ip; then
-					(set -x; sleep 3; dnf -y -q install -y -q iproute)
+					( set -x; sleep 3; dnf -y -q install -y -q iproute )
 				fi
 
 				if ! command_exists iptables; then
-					(set -x; sleep 3; dnf -y -q install iptables)
+					( set -x; sleep 3; dnf -y -q install iptables )
+				fi
+
+				if ! ip_support_tuntap; then
+					( set -x; sleep 3; dnf -y -q install tunctl )
 				fi
 			elif [ "$lsb_dist" = "photon" ]; then
 				if ! command_exists wget; then
@@ -269,6 +281,9 @@ install_deps() {
 				if ! command_exists iptables; then
 					( set -x; sleep 3; tdnf -y install iptables )
 				fi
+				if ! ip_support_tuntap; then
+					( set -x; sleep 3; tdnf -y install tunctl )
+				fi
 			else
 				if ! command_exists wget; then
 					( set -x; sleep 3; yum -y -q install wget ca-certificates )
@@ -278,6 +293,9 @@ install_deps() {
 				fi
 				if ! command_exists iptables firewall-cmd; then
 					( set -x; sleep 3; yum -y -q install iptables )
+				fi
+				if ! ip_support_tuntap; then
+					( set -x; sleep 3; yum -y -q install tunctl )
 				fi
 			fi
 		;;
@@ -295,7 +313,7 @@ download_file() {
 	local url=$1
 	local file=$2
 
-	(set -x; wget -O "$file" --no-check-certificate "$url")
+	( set -x; wget -O "$file" --no-check-certificate "$url" )
 	if [ "$?" != "0" ]; then
 		cat >&2 <<-EOF
 		一些文件下载失败！安装脚本需要能访问到 github.com，请检查服务器网络。
@@ -308,62 +326,108 @@ download_file() {
 
 install_haproxy() {
 	set -x
-	mkdir -p "${HAPROXY_DIR}"/{etc,lib64,sbin}
+	mkdir -p "${HAPROXY_LKL_DIR}"/etc \
+		"${HAPROXY_LKL_DIR}"/lib64 \
+		"${HAPROXY_LKL_DIR}"/sbin
 	useradd -U -s '/usr/sbin/nologin' -d '/nonexistent' haproxy 2>/dev/null
 	set +x
 
-	local haproxy_bin="${HAPROXY_DIR}/sbin/haproxy"
-
+	local haproxy_bin="${HAPROXY_LKL_DIR}/sbin/haproxy"
 	download_file "$HAPROXY_BIN_URL" "$haproxy_bin"
 	chmod +x "$haproxy_bin"
 
-	check_haproxy_bin() {
-		local bin=$1
-		if ! $bin -v 2>/dev/null | grep -q 'HA-Proxy'; then
+	if ! ( $haproxy_bin -v 2>/dev/null | grep -q 'HA-Proxy' ); then
+		cat >&2 <<-EOF
+		HAproxy 可执行文件无法正常运行
+		可能是 glibc 版本过低，或者文件不适用于你的系统。
+		请联系脚本作者，寻求支持。
+		EOF
+		(
+			set -x
+			ldd --version
+		)
+		exit 1
+	fi
+
+	local haproxy_lkl_bin="${HAPROXY_LKL_DIR}/sbin/${SERVICE_NAME}"
+	download_file "$HAPROXY_LKL_BIN_URL" "$haproxy_lkl_bin"
+
+	sed -ir "s#^HAPROXY_LKL_DIR=.*#HAPROXY_LKL_DIR='"${HAPROXY_LKL_DIR}"'#" \
+		"$haproxy_lkl_bin"
+
+	set_interface() {
+		local has_vnet=0
+		if command_exists ip; then
+			ip -o link show | grep -q 'venet0'
+			has_vnet=$?
+		elif command_exists ifconfig; then
+			ifconfig -s | grep -q 'venet0'
+			has_vnet=$?
+		fi
+
+		if [ "$has_vnet" != 0 ]; then
 			cat >&2 <<-EOF
-			HAproxy 可执行文件无法正常运行，请联系脚本作者，寻求支持。
+			检测发现你的网络接口不是 venet0，需要你手动输入一下你服务器的网络接口。
+			你可以从下面的信息中确定你的网络接口。
 			EOF
 
-			exit 1
+			if command_exists ip; then
+				ip addr show
+			else
+				ifconfig
+			fi
+
+			local input=
+			while :
+			do
+				read -p "请输入你的网络接口名称(例如: eth0): " input
+				echo
+				if [ -n "$input" ];
+					sed -ir "s#^INTERFACE=.*#INTERFACE='"${input}"'#" "$haproxy_lkl_bin"
+				else
+					echo "输入有误，请重新输入！"
+					continue
+				fi
+
+				break
+			done
 		fi
 	}
+	set_interface
 
-	check_haproxy_bin "$haproxy_bin"
+	chmod +x "$haproxy_lkl_bin"
 
-	local haproxy_startup_file=
-	local haproxy_startup_file_url=
+	local haproxy_lkl_startup_file=
+	local haproxy_lkl_startup_file_url=
 
 	if command_exists systemctl; then
-		local haproxy_bin_wrapper="${HAPROXY_DIR}/sbin/haproxy-systemd-wrapper"
-		download_file "$HAPROXY_BIN_WRAPPER_URL" "$haproxy_bin_wrapper"
+		haproxy_lkl_startup_file="/lib/systemd/system/${SERVICE_NAME}.service"
+		haproxy_lkl_startup_file_url="${HAPROXY_LKL_SYSTEMD_FILE_URL}"
 
-		chmod +x "$haproxy_bin_wrapper"
-		check_haproxy_bin "$haproxy_bin_wrapper"
-
-		haproxy_start_script="/lib/systemd/system/${SERVICE_NAME}.service"
-		haproxy_start_script_url="${HAPROXY_SYSTEMD_FILE_URL}"
-
-		download_file "$haproxy_start_script_url" "$haproxy_start_script"
+		download_file "$haproxy_lkl_startup_file_url" "$haproxy_lkl_startup_file"
 		(
 			set -x
 			systemctl enable "${SERVICE_NAME}.service"
 		)
 
 	elif command_exists service; then
-		haproxy_start_script="/etc/init.d/${SERVICE_NAME}"
+		haproxy_lkl_startup_file="/etc/init.d/${SERVICE_NAME}"
 		case "$lsb_dist" in
 			ubuntu|debian|raspbian)
-				haproxy_start_script_url="${HAPROXY_SERVICE_FILE_DEBIAN_URL}"
+				haproxy_lkl_startup_file_url="${HAPROXY_LKL_SERVICE_FILE_DEBIAN_URL}"
 
-				download_file "$haproxy_start_script_url" "$haproxy_start_script"
-				chmod +x "$haproxy_start_script"
-				(set -x; update-rc.d -f "${SERVICE_NAME}" defaults)
+				download_file "$haproxy_lkl_startup_file_url" "$haproxy_lkl_startup_file"
+				chmod +x "$haproxy_lkl_startup_file"
+				(
+					set -x
+					update-rc.d -f "${SERVICE_NAME}" defaults
+				)
 			;;
 			fedora|centos|redhat|oraclelinux|photon)
-				haproxy_start_script_url="${HAPROXY_SERVICE_FILE_REDHAT_URL}"
+				haproxy_lkl_startup_file_url="${HAPROXY_LKL_SERVICE_FILE_REDHAT_URL}"
 
-				download_file "$haproxy_start_script_url" "$haproxy_start_script"
-				chmod +x "$haproxy_start_script"
+				download_file "$haproxy_lkl_startup_file_url" "$haproxy_lkl_startup_file"
+				chmod +x "$haproxy_lkl_startup_file"
 				(
 					set -x
 					chkconfig --add "${SERVICE_NAME}"
@@ -385,23 +449,12 @@ install_haproxy() {
 		exit 1
 	fi
 
-	cat > "${HAPROXY_DIR}/etc/haproxy.cfg"<<-EOF
-	global
-	    user haproxy
-	    group haproxy
-	defaults
-	    mode tcp
-	    timeout client 30s
-	    timeout server 30s
-	    timeout connect 5s
-	listen tcp1
-	    bind 10.0.0.2:${HAPROXY_LISTEN_PORT}
-	    server server1 10.0.0.1:${HAPROXY_TARGET_PORT}
-	EOF
+	echo "${HAPROXY_LISTEN_PORT}=${HAPROXY_TARGET_PORT}" \
+		> "${HAPROXY_LKL_DIR}/etc/port-rules"
 }
 
 install_lkl_lib() {
-	local lib_file="${HAPROXY_DIR}/lib64/liblkl-hijack.so"
+	local lib_file="${HAPROXY_LKL_DIR}/lib64/liblkl-hijack.so"
 	local retry=0
 	download_lkl_lib() {
 		download_file "$LKL_LIB_URL" "$lib_file"
@@ -413,11 +466,14 @@ install_lkl_lib() {
 			if [ "$?" != "0" ]; then
 				if [ "$retry" -lt "3" ]; then
 					echo "文件校验失败！3 秒后重新下载..."
-					let retry++
+					retry=`expr $retry + 1`
 					sleep 3
 					download_lkl_lib
 				else
-					echo "Linux 内核文件下载校验失败。"
+					cat >&2 <<-EOF
+					Linux 内核文件校验失败。
+					通常是网络原因造成文件下载不全。
+					EOF
 					exit 1
 				fi
 			fi
@@ -438,114 +494,113 @@ set_network() {
 			sysctl -p /etc/sysctl.conf 2>/dev/null
 		)
 	fi
-
-	set -x
-	ip tuntap add ${LKL_TAP_NAME} mode tap 2>/dev/null
-	ip addr add 10.0.0.1/24 dev ${LKL_TAP_NAME} 2>/dev/null
-	ip link set ${LKL_TAP_NAME} up 2>/dev/null
-
-	iptables -P FORWARD ACCEPT 2>/dev/null
-
-	if ! iptables -t nat -C POSTROUTING -o venet0 -j MASQUERADE 2>/dev/null; then
-		iptables -t nat -A POSTROUTING -o venet0 -j MASQUERADE 2>/dev/null
-	fi
-
-	if [ -z "$HAPROXY_LISTEN_PORT" -o -z "$HAPROXY_TARGET_PORT" ]; then
-		echo "HAproxy 监听端口和加速端口不能为空！"
-		exit 1
-	fi
-
-	if ! iptables -t nat -C PREROUTING -i venet0 -p tcp \
-		--dport ${HAPROXY_LISTEN_PORT} -j DNAT --to-destination 10.0.0.2 2>/dev/null; then
-		iptables -t nat -A PREROUTING -i venet0 -p tcp \
-			--dport ${HAPROXY_LISTEN_PORT} -j DNAT --to-destination 10.0.0.2 2>/dev/null
-	fi
-
-	if ! iptables -t nat -C PREROUTING -i venet0 -p udp \
-		--dport ${HAPROXY_LISTEN_PORT} -j REDIRECT --to-port ${HAPROXY_TARGET_PORT} 2>/dev/null; then
-		iptables -t nat -A PREROUTING -i venet0 -p udp \
-			--dport ${HAPROXY_LISTEN_PORT} -j REDIRECT --to-port ${HAPROXY_TARGET_PORT} 2>/dev/null
-	fi
-
-	set +x
 }
 
 set_config() {
-	is_number() {
-		expr $1 + 1 >/dev/null 2>&1
+	is_port() {
+		local port=$1
+		expr $port + 1 >/dev/null 2>&1 && \
+			[ "$port" -ge "1" -a "$port" -le "65535" ]
 	}
 
 	local input=
-	while :
-	do
-		read -p "请输入 HAproxy 运行端口 [1~65535]: " input
-		echo
-		if [ -n "$input" ]; then
-			if is_number $input && [ "$input" -ge "1" -a "$input" -le "65535" ]; then
-				HAPROXY_LISTEN_PORT="$input"
+	if [ -z "$HAPROXY_LISTEN_PORT" ] || ! is_port "$HAPROXY_LISTEN_PORT"; then
+		while :
+		do
+			read -p "请输入 HAproxy 运行端口 [1~65535]: " input
+			echo
+			if [ -n "$input" ] && is_port $input; then
+					HAPROXY_LISTEN_PORT="$input"
 			else
 				echo "输入有误, 请输入 1~65535 之间的数字!"
 				continue
 			fi
-		else
-			echo "端口不能为空!"
-			continue
-		fi
+			input=
+			break
+		done
+	fi
 
-		input=
-		cat >&2 <<-EOF
-		---------------------------
-		HAproxy 端口 = ${HAPROXY_LISTEN_PORT}
-		---------------------------
-		EOF
-		break
-	done
-
-	while :
-	do
-		read -p "请输入需要加速的端口 [1~65535]: " input
-		echo
-		if [ -n "$input" ]; then
-			if is_number $input && [ "$input" -ge "1" -a "$input" -le "65535" ]; then
-				HAPROXY_TARGET_PORT="$input"
+	if [ -z "$HAPROXY_TARGET_PORT" ] || ! is_port "$HAPROXY_TARGET_PORT"; then
+		while :
+		do
+			read -p "请输入需要加速的端口 [1~65535]: " input
+			echo
+			if [ -n "$input" ] && is_port $input; then
+					HAPROXY_TARGET_PORT="$input"
 			else
 				echo "输入有误, 请输入 1~65535 之间的数字!"
 				continue
 			fi
-		else
-			echo "端口不能为空!"
-			continue
-		fi
+			break
+		done
+	fi
 
-		cat >&2 <<-EOF
-		---------------------------
-		加速端口 = ${HAPROXY_TARGET_PORT}
-		---------------------------
-		EOF
-		break
-	done
+	cat >&2 <<-EOF
+	---------------------------
+	HAproxy 端口 = ${HAPROXY_LISTEN_PORT}
+	加速端口 = ${HAPROXY_TARGET_PORT}
+	---------------------------
+	EOF
 
-	echo "配置完成。"
 	any_key_to_continue
+}
+
+is_running() {
+	(
+		set -x
+		sleep 3
+		ping -q -c3 10.0.0.2 2>/dev/null
+	)
+	return $?
+}
+
+start_service() {
+	if command_exists systemctl; then
+		(
+			set -x
+			sleep 3
+			systemctl start "$SERVICE_NAME"
+		)
+	else
+		(
+			set -x
+			sleep 3
+			service "$SERVICE_NAME" start
+		)
+	fi
+
+	if [ "$?" = "0" ] && is_running; then
+		end_install
+	else
+		cat >&2 <<-EOF
+		很遗憾，
+		HAproxy 启动失败，现在还不清楚问题出在哪里，
+		但是你可以到我们的群里反馈一下。
+		EOF
+
+		exit 1
+	fi
 }
 
 end_install() {
 	clear
 
 	cat >&2 <<-EOF
-	BBR 安装完成！
+	恭喜！
+	HAproxy 和 Linux Kernel Library 安装完成并成功启动
+
 	新端口: ${HAPROXY_LISTEN_PORT}
 	原端口: ${HAPROXY_TARGET_PORT}
 	EOF
 	if command_exists systemctl; then
-		systemctl start "$SERVICE_NAME"
+
 		cat >&2 <<-EOF
 
 		请使用 systemctl {start|stop|restart} ${SERVICE_NAME}
 		来 {开启|关闭|重启} 服务
 		EOF
 	else
-		service "$SERVICE_NAME" start
+
 		cat >&2 <<-EOF
 
 		请使用 service ${SERVICE_NAME} {start|stop|restart}

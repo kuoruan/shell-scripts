@@ -13,201 +13,127 @@
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 BASENAME=haproxy-lkl
-PREFIX=/usr/local/$BASENAME
-HAPROXY=${PREFIX}/sbin/haproxy
+HAPROXY_LKL_DIR=/usr/local/$BASENAME
+HAPROXY=${HAPROXY_LKL_DIR}/sbin/haproxy
+HAPROXY_LKL=${HAPROXY_LKL_DIR}/sbin/$BASENAME
 
 PIDFILE=/var/run/${BASENAME}.pid
-CONFIG=${PREFIX}/etc/haproxy.cfg
-RUNDIR=/run/$BASENAME
+CONFIG=${HAPROXY_LKL_DIR}/etc/haproxy.cfg
 EXTRAOPTS=
 
+RETVAL=0
+
 test -x $HAPROXY || exit 0
+test -x $HAPROXY_LKL || exit 0
 
-if [ -e /etc/default/${BASENAME} ]; then
-	. /etc/default/${BASENAME}
-fi
-
-test -f "$CONFIG" || exit 0
-
-[ -f /etc/default/rcS ] && . /etc/default/rcS
 . /lib/lsb/init-functions
 
-
-check_haproxy_config()
-{
-	$HAPROXY -c -f "$CONFIG" $EXTRAOPTS >/dev/null
-	if [ $? -eq 1 ]; then
-		log_end_msg 1
-		exit 1
+do_start() {
+	if get_status; then
+		return 1
 	fi
-}
 
-haproxy_start()
-{
-	[ -d "$RUNDIR" ] || mkdir "$RUNDIR"
-	chown haproxy:haproxy "$RUNDIR"
-	chmod 2775 "$RUNDIR"
-
-	check_haproxy_config
-
-	set_environment \
 	start-stop-daemon --quiet --oknodo --start --pidfile "$PIDFILE" \
-		--exec $HAPROXY -- -f "$CONFIG" -D -p "$PIDFILE" \
-		$EXTRAOPTS || return 2
+		--exec $HAPROXY_LKL -- $EXTRAOPTS || return 2
 	return 0
 }
 
-set_environment()
-{
-	export LD_PRELOAD="${PREFIX}/lib64/liblkl-hijack.so"
-	export LKL_HIJACK_NET_QDISC='root|fq'
-	export LKL_HIJACK_SYSCTL='net.ipv4.tcp_wmem=4096 65536 67108864'
-	export LKL_HIJACK_NET_IFTYPE=tap
-	export LKL_HIJACK_NET_IFPARAMS=lkl
-	export LKL_HIJACK_NET_IP=10.0.0.2
-	export LKL_HIJACK_NET_NETMASK_LEN=24
-	export LKL_HIJACK_NET_GATEWAY=10.0.0.1
-	export LKL_HIJACK_OFFLOAD=0x8883
-}
-
-haproxy_stop()
-{
+do_stop() {
 	if [ ! -f $PIDFILE ] ; then
 		# This is a success according to LSB
 		return 0
 	fi
 
 	ret=0
-	tmppid="$(mktemp)"
+	start-stop-daemon --quiet --oknodo --stop \
+		--retry 5 --pidfile "$PIDFILE" --exec $HAPROXY || ret=$?
 
-	# HAProxy's pidfile may contain multiple PIDs, if nbproc > 1, so loop
-	# over each PID. Note that start-stop-daemon has a --pid option, but it
-	# was introduced in dpkg 1.17.6, post wheezy, so we use a temporary
-	# pidfile instead to ease backports.
-	for pid in $(cat $PIDFILE); do
-		echo "$pid" > "$tmppid"
-		start-stop-daemon --quiet --oknodo --stop \
-			--retry 5 --pidfile "$tmppid" --exec $HAPROXY || ret=$?
-	done
-
-	rm -f "$tmppid"
 	[ $ret -eq 0 ] && rm -f $PIDFILE
 
 	return $ret
 }
 
-haproxy_reload()
-{
-	check_haproxy_config
-
-	$HAPROXY -f "$CONFIG" -p $PIDFILE -sf $(cat $PIDFILE) -D $EXTRAOPTS \
-		|| return 2
-	return 0
-}
-
-haproxy_status()
-{
+get_status() {
 	if [ ! -f $PIDFILE ] ; then
 		# program not running
 		return 3
 	fi
 
-	for pid in $(cat $PIDFILE) ; do
-		if ! ps --no-headers p "$pid" | grep haproxy > /dev/null ; then
-			# program running, bogus pidfile
-			return 1
-		fi
-	done
+	if ! ps --no-headers p "$(cat $PIDFILE)" | grep -q 'haproxy'; then
+		# program running, bogus pidfile
+		return 1
+	fi
 
 	return 0
 }
 
-
 case "$1" in
-start)
-	log_daemon_msg "Starting haproxy" "${BASENAME}"
-	haproxy_start
-	ret=$?
-	case "$ret" in
-	0)
-		log_end_msg 0
+	start)
+		log_daemon_msg "Starting haproxy" "${BASENAME}"
+		do_start
+		RETVAL=$?
+		case "$RETVAL" in
+		0)
+			log_end_msg 0
+			;;
+		1)
+			log_end_msg 1
+			echo "pid file '$PIDFILE' found, and ${BASENAME} already running."
+			;;
+		2)
+			log_end_msg 1
+			;;
+		esac
 		;;
-	1)
-		log_end_msg 1
-		echo "pid file '$PIDFILE' found, ${BASENAME} not started."
+	stop)
+		log_daemon_msg "Stopping haproxy" "${BASENAME}"
+		do_stop
+		RETVAL=$?
+		case "$RETVAL" in
+		0|1)
+			log_end_msg 0
+			;;
+		2)
+			log_end_msg 1
+			;;
+		esac
 		;;
-	2)
-		log_end_msg 1
+	restart)
+		log_daemon_msg "Restarting haproxy" "${BASENAME}"
+		do_stop
+		do_start
+		RETVAL=$?
+		case "$RETVAL" in
+		0)
+			log_end_msg 0
+			;;
+		1)
+			log_end_msg 1
+			;;
+		2)
+			log_end_msg 1
+			;;
+		esac
 		;;
-	esac
-	exit $ret
-	;;
-stop)
-	log_daemon_msg "Stopping haproxy" "${BASENAME}"
-	haproxy_stop
-	ret=$?
-	case "$ret" in
-	0|1)
-		log_end_msg 0
-		;;
-	2)
-		log_end_msg 1
-		;;
-	esac
-	exit $ret
-	;;
-reload|force-reload)
-	log_daemon_msg "Reloading haproxy" "${BASENAME}"
-	haproxy_reload
-	ret=$?
-	case "$ret" in
-	0|1)
-		log_end_msg 0
-		;;
-	2)
-		log_end_msg 1
-		;;
-	esac
-	exit $ret
-	;;
-restart)
-	log_daemon_msg "Restarting haproxy" "${BASENAME}"
-	haproxy_stop
-	haproxy_start
-	ret=$?
-	case "$ret" in
-	0)
-		log_end_msg 0
-		;;
-	1)
-		log_end_msg 1
-		;;
-	2)
-		log_end_msg 1
-		;;
-	esac
-	exit $ret
-	;;
-status)
-	haproxy_status
-	ret=$?
-	case "$ret" in
-	0)
-		echo "${BASENAME} is running."
-		;;
-	1)
-		echo "${BASENAME} dead, but $PIDFILE exists."
+	status)
+		get_status
+		RETVAL=$?
+		case "$RETVAL" in
+		0)
+			echo "${BASENAME} is running."
+			;;
+		1)
+			echo "${BASENAME} dead, but $PIDFILE exists."
+			;;
+		*)
+			echo "${BASENAME} not running."
+			;;
+		esac
 		;;
 	*)
-		echo "${BASENAME} not running."
+		echo "Usage: /etc/init.d/${BASENAME} {start|stop|restart|status}"
+		RETVAL=2
 		;;
-	esac
-	exit $ret
-	;;
-*)
-	echo "Usage: /etc/init.d/${BASENAME} {start|stop|reload|restart|status}"
-	exit 2
-	;;
 esac
 
-:
+exit $RETVAL

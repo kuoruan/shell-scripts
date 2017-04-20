@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/HAPROXY/sh
 #
 # haproxy-lkl
 #
@@ -8,9 +8,6 @@
 # processname: haproxy-lkl
 # config: /usr/local/haproxy-lkl/etc/haproxy.cfg
 # pidfile: /var/run/haproxy-lkl.pid
-
-# Script Author: Simon Matter <simon.matter@invoca.ch>
-# Version: 2004060600
 
 # Source function library.
 if [ -f /etc/init.d/functions ]; then
@@ -28,120 +25,57 @@ fi
 [ ${NETWORKING} = "no" ] && exit 0
 
 BASENAME=haproxy-lkl
-PREFIX=/usr/local/$BASENAME
-BIN=${PREFIX}/sbin/haproxy
-
-CFG=${PREFIX}/etc/haproxy.cfg
-[ -f $CFG ] || exit 1
+HAPROXY_LKL_DIR=/usr/local/$BASENAME
+HAPROXY=${HAPROXY_LKL_DIR}/sbin/haproxy
+HAPROXY_LKL=${HAPROXY_LKL_DIR}/sbin/$BASENAME
 
 PIDFILE=/var/run/${BASENAME}.pid
-LOCKFILE=/var/run/$BASENAME.lock
+EXTRAOPTS=
 
 RETVAL=0
 
-start() {
-  quiet_check
-  if [ $? -ne 0 ]; then
-    echo "Errors found in configuration file, check it with '$BASENAME check'."
-    return 1
-  fi
-
-  echo -n "Starting $BASENAME: "
-	set_environment \
-  daemon $BIN -D -f $CFG -p $PIDFILE
-  RETVAL=$?
-  echo
-  [ $RETVAL -eq 0 ] && touch $LOCKFILE
-  return $RETVAL
+do_start() {
+	if get_status >/dev/null 2>&1; then
+		echo "$BASENAME is already running."
+		RETVAL=1
+	else
+		echo -n "Starting $BASENAME: "
+	  daemon --pidfile=$PIDFILE $HAPROXY_LK $EXTRAOPTS
+	  RETVAL=$?
+	fi
 }
 
-set_environment() {
-	export LD_PRELOAD="${PREFIX}/lib64/liblkl-hijack.so"
-	export LKL_HIJACK_NET_QDISC='root|fq'
-	export LKL_HIJACK_SYSCTL='net.ipv4.tcp_wmem=4096 65536 67108864'
-	export LKL_HIJACK_NET_IFTYPE=tap
-	export LKL_HIJACK_NET_IFPARAMS=lkl
-	export LKL_HIJACK_NET_IP=10.0.0.2
-	export LKL_HIJACK_NET_NETMASK_LEN=24
-	export LKL_HIJACK_NET_GATEWAY=10.0.0.1
-	export LKL_HIJACK_OFFLOAD=0x8883
-}
-
-stop() {
+do_stop() {
   echo -n "Shutting down $BASENAME: "
-  killproc -p $PIDFILE $BASENAME -USR1
+  killproc -p $PIDFILE $HAPROXY -USR1
   RETVAL=$?
   echo
-  [ $RETVAL -eq 0 ] && rm -f $LOCKFILE
   [ $RETVAL -eq 0 ] && rm -f $PIDFILE
-  return $RETVAL
 }
 
-restart() {
-  quiet_check
-  if [ $? -ne 0 ]; then
-    echo "Errors found in configuration file, check it with '$BASENAME check'."
-    return 1
-  fi
-  stop
-  start
-}
-
-reload() {
-  if ! [ -s $PIDFILE ]; then
-    return 0
-  fi
-
-  quiet_check
-  if [ $? -ne 0 ]; then
-    echo "Errors found in configuration file, check it with '$BASENAME check'."
-    return 1
-  fi
-  $BIN -D -f $CFG -p $PIDFILE -sf $(cat $PIDFILE)
-}
-
-check() {
-  $BIN -c -q -V -f $CFG
-}
-
-quiet_check() {
-  $BIN -c -q -f $CFG
-}
-
-rhstatus() {
-  status $BASENAME
-}
-
-condrestart() {
-  [ -e $LOCKFILE ] && restart || :
+get_status() {
+  status -p $PIDFILE $HAPROXY
+	RETVAL=$?
 }
 
 # See how we were called.
 case "$1" in
   start)
-    start
+    do_start
     ;;
   stop)
-    stop
+    do_stop
     ;;
   restart)
-    restart
-    ;;
-  reload)
-    reload
-    ;;
-  condrestart)
-    condrestart
+    do_stop
+		do_start
     ;;
   status)
-    rhstatus
-    ;;
-  check)
-    check
+    get_status
     ;;
   *)
-    echo $"Usage: $BASENAME {start|stop|restart|reload|condrestart|status|check}"
+    echo $"Usage: /etc/init.d/$BASENAME {start|stop|restart|status}"
     exit 1
 esac
 
-exit $?
+exit $RETVAL

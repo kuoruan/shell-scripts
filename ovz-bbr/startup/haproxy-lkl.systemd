@@ -3,23 +3,11 @@ Description=HAProxy Load Balancer with Linux Kernel Library
 After=network.target
 
 [Service]
+Type=forking
 Environment="BASENAME=haproxy-lkl"
-Environment="PREFIX=/usr/local/${BASENAME}"
-Environment="CONFIG=${PREFIX}/etc/haproxy.cfg"
-Environment="PIDFILE=/run/${BASENAME}.pid"
-Environment="LD_PRELOAD=${PREFIX}/lib64/liblkl-hijack.so"
-Environment="LKL_HIJACK_NET_QDISC='root|fq'"
-Environment="LKL_HIJACK_SYSCTL='net.ipv4.tcp_wmem=4096 65536 67108864'"
-Environment="LKL_HIJACK_NET_IFTYPE=tap"
-Environment="LKL_HIJACK_NET_IFPARAMS=lkl"
-Environment="LKL_HIJACK_NET_IP=10.0.0.2"
-Environment="LKL_HIJACK_NET_NETMASK_LEN=24"
-Environment="LKL_HIJACK_NET_GATEWAY=10.0.0.1"
-Environment="LKL_HIJACK_OFFLOAD=0x8883"
-ExecStartPre=${PREFIX}/sbin/haproxy -f $CONFIG -c -q
-ExecStart=${PREFIX}/sbin/haproxy-systemd-wrapper -f $CONFIG -p $PIDFILE
-ExecReload=${PREFIX}/sbin/haproxy -f $CONFIG -c -q
-ExecReload=/bin/kill -USR2 $MAINPID
+PIDFile=/var/run/${BASENAME}.pid
+ExecStart=/usr/local/${BASENAME}/sbin/$BASENAME
+ExecStop=/bin/kill -USR2 $MAINPID
 KillMode=mixed
 Restart=always
 
