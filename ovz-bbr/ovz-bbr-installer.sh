@@ -459,10 +459,10 @@ install_lkl_lib() {
 	download_lkl_lib() {
 		download_file "$LKL_LIB_URL" "$lib_file"
 		if command_exists md5sum; then
-			set -x
-			echo "${LKL_LIB_MD5} ${lib_file}" | md5sum -c
-			set +x
-
+			(
+				set -x
+				echo "${LKL_LIB_MD5}  ${lib_file}" | md5sum -c
+			)
 			if [ "$?" != "0" ]; then
 				if [ "$retry" -lt "3" ]; then
 					echo "文件校验失败！3 秒后重新下载..."
@@ -485,7 +485,7 @@ install_lkl_lib() {
 	chmod +x "$lib_file"
 }
 
-set_network() {
+enable_ip_forward() {
 	local ip_forword="$(sysctl -n 'net.ipv4.ip_forward' 2>/dev/null)"
 	if [ -z "$ip_forword" -o "$ip_forword" != "1" ]; then
 		(
@@ -628,8 +628,8 @@ do_install() {
 	install_deps
 	install_haproxy
 	install_lkl_lib
-	set_network
-	end_install
+	enable_ip_forward
+	start_service
 }
 
 do_install
