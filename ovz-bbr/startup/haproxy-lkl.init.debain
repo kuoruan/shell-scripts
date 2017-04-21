@@ -132,7 +132,7 @@ case "$1" in
 		;;
 	*)
 		echo "Usage: /etc/init.d/${BASENAME} {start|stop|restart|status}"
-		RETVAL=2
+		RETVAL=255
 		;;
 esac
 

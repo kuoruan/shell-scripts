@@ -42,7 +42,7 @@ check_constants() {
 		cat >&2 <<-EOF
 		Error: Please set your haproxy lkl install dir first.
 		    * Edit $0 and set HAPROXY_LKL_DIR at the top.
-				* Default is /usr/local/haproxy-lkl
+		    * Default is /usr/local/haproxy-lkl
 		EOF
 		exit 1
 	fi

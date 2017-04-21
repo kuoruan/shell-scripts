@@ -44,6 +44,7 @@ cat >&2 <<-'EOF'
 # 作者博客: https://blog.kuoruan.com/                 #
 # Github: https://github.com/kuoruan                  #
 # QQ交流群: 43391448, 68133628                        #
+#           633945405                                 #
 #######################################################
 EOF
 
@@ -187,7 +188,6 @@ get_os_info() {
 		;;
 
 		oracleserver)
-			# need to switch lsb_dist to match yum repo URL
 			lsb_dist="oraclelinux"
 			dist_version="$(rpm -q --whatprovides redhat-release --queryformat "%{VERSION}\n" | sed 's/\/.*//' | sed 's/\..*//' | sed 's/Server*//')"
 		;;

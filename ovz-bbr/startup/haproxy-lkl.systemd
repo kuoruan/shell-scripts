@@ -4,9 +4,8 @@ After=network.target
 
 [Service]
 Type=forking
-Environment="BASENAME=haproxy-lkl"
-PIDFile=/var/run/${BASENAME}.pid
-ExecStart=/usr/local/${BASENAME}/sbin/$BASENAME
+PIDFile=/var/run/haproxy-lkl.pid
+ExecStart=/usr/local/haproxy-lkl/sbin/haproxy-lkl
 ExecStop=/bin/kill -USR2 $MAINPID
 KillMode=mixed
 Restart=always
