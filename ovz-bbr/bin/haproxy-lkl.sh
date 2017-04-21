@@ -53,8 +53,8 @@ set_network() {
 		ip tuntap del dev ${LKL_TAP_NAME} mode tap 2>/dev/null
 		ip tuntap add dev ${LKL_TAP_NAME} mode tap 2>/dev/null
 	elif command_exists tunctl; then
-		tunctl -d ${LKL_TAP_NAME} 2>/dev/null
-		tunctl -t ${LKL_TAP_NAME} -u haproxy 2>/dev/null
+		tunctl -d ${LKL_TAP_NAME} >/dev/null 2>&1
+		tunctl -t ${LKL_TAP_NAME} -u haproxy >/dev/null 2>&1
 	else
 		cat >&2 <<-'EOF'
 		Error: Can't find command ip (with tuntap) or tunctl.

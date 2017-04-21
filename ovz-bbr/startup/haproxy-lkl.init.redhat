@@ -1,4 +1,4 @@
-#!/HAPROXY/sh
+#!/bin/sh
 #
 # haproxy-lkl
 #
@@ -35,47 +35,49 @@ EXTRAOPTS=
 RETVAL=0
 
 do_start() {
-	if get_status >/dev/null 2>&1; then
+	if ( get_status >/dev/null 2>&1 ); then
 		echo "$BASENAME is already running."
 		RETVAL=1
 	else
 		echo -n "Starting $BASENAME: "
-	  daemon --pidfile=$PIDFILE $HAPROXY_LK $EXTRAOPTS
-	  RETVAL=$?
+		daemon --pidfile=$PIDFILE $HAPROXY_LKL $EXTRAOPTS
+		RETVAL=$?
+		echo
 	fi
 }
 
 do_stop() {
-  echo -n "Shutting down $BASENAME: "
-  killproc -p $PIDFILE $HAPROXY -USR1
-  RETVAL=$?
-  echo
-  [ $RETVAL -eq 0 ] && rm -f $PIDFILE
+	echo -n "Shutting down $BASENAME: "
+	killproc -p $PIDFILE $HAPROXY
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && rm -f $PIDFILE
 }
 
 get_status() {
-  status -p $PIDFILE $HAPROXY
+	status -p $PIDFILE $HAPROXY
 	RETVAL=$?
+	return $RETVAL
 }
 
 # See how we were called.
 case "$1" in
-  start)
-    do_start
-    ;;
-  stop)
-    do_stop
-    ;;
-  restart)
-    do_stop
+	start)
 		do_start
-    ;;
-  status)
-    get_status
-    ;;
-  *)
-    echo $"Usage: /etc/init.d/$BASENAME {start|stop|restart|status}"
-    exit 1
+		;;
+	stop)
+		do_stop
+		;;
+	restart)
+		do_stop
+		do_start
+		;;
+	status)
+		get_status
+		;;
+	*)
+		echo $"Usage: /etc/init.d/$BASENAME {start|stop|restart|status}"
+		RETVAL=255
 esac
 
 exit $RETVAL
