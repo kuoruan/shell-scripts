@@ -15,7 +15,7 @@ EOF
 
 INTERFACE='venet0'
 LKL_TAP_NAME='lkl'
-HAPROXY_LKL_DIR=
+HAPROXY_LKL_DIR='/usr/local/haproxy-lkl'
 
 HAPROXY_BIN="${HAPROXY_LKL_DIR}/sbin/haproxy"
 PROT_RULES_FILE="${HAPROXY_LKL_DIR}/etc/port-rules"
@@ -172,8 +172,9 @@ gen_cfg_file() {
 		done
 
 		if [ "$i" = "0" ]; then
-			cat >&2 <<-'EOF'
-			Error: You port rule file has a wrong format
+			cat >&2 <<-EOF
+			Error: Port rule file format error
+			Please check $PROT_RULES_FILE
 			EOF
 		fi
 	fi

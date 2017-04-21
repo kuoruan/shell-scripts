@@ -268,7 +268,7 @@ install_deps() {
 					( set -x; sleep 3; dnf -y -q install iptables )
 				fi
 
-				if ! ip_support_tuntap; then
+				if ! ip_support_tuntap && ! command_exists tunctl; then
 					( set -x; sleep 3; dnf -y -q install tunctl )
 				fi
 			elif [ "$lsb_dist" = "photon" ]; then
@@ -281,7 +281,7 @@ install_deps() {
 				if ! command_exists iptables; then
 					( set -x; sleep 3; tdnf -y install iptables )
 				fi
-				if ! ip_support_tuntap; then
+				if ! ip_support_tuntap && ! command_exists tunctl; then
 					( set -x; sleep 3; tdnf -y install tunctl )
 				fi
 			else
@@ -294,7 +294,7 @@ install_deps() {
 				if ! command_exists iptables firewall-cmd; then
 					( set -x; sleep 3; yum -y -q install iptables )
 				fi
-				if ! ip_support_tuntap; then
+				if ! ip_support_tuntap && ! command_exists tunctl; then
 					( set -x; sleep 3; yum -y -q install tunctl )
 				fi
 			fi
@@ -352,7 +352,7 @@ install_haproxy() {
 	local haproxy_lkl_bin="${HAPROXY_LKL_DIR}/sbin/${SERVICE_NAME}"
 	download_file "$HAPROXY_LKL_BIN_URL" "$haproxy_lkl_bin"
 
-	sed -ir "s#^HAPROXY_LKL_DIR=.*#HAPROXY_LKL_DIR='"${HAPROXY_LKL_DIR}"'#" \
+	sed -i -r "s#^HAPROXY_LKL_DIR=.*#HAPROXY_LKL_DIR='"${HAPROXY_LKL_DIR}"'#" \
 		"$haproxy_lkl_bin"
 
 	set_interface() {
@@ -367,8 +367,12 @@ install_haproxy() {
 
 		if [ "$has_vnet" != 0 ]; then
 			cat >&2 <<-EOF
-			检测发现你的网络接口不是 venet0，需要你手动输入一下你服务器的网络接口。
-			你可以从下面的信息中确定你的网络接口。
+			检测发现你的公网接口不是 venet0，需要你手动输入一下网络接口名称。
+			我们会根据网络接口设置转发规则，如果网络接口名称设置不正确，
+			外部网络将无法正常访问到内部服务端口。
+			 * 网络接口是具有公网 IP 的接口名称。
+
+			你可以从下面的信息中找到你的公网接口名称:
 			EOF
 
 			if command_exists ip; then
@@ -383,9 +387,9 @@ install_haproxy() {
 				read -p "请输入你的网络接口名称(例如: eth0): " input
 				echo
 				if [ -n "$input" ]; then
-					sed -ir "s#^INTERFACE=.*#INTERFACE='"${input}"'#" "$haproxy_lkl_bin"
+					sed -i -r "s#^INTERFACE=.*#INTERFACE='"${input}"'#" "$haproxy_lkl_bin"
 				else
-					echo "输入有误，请重新输入！"
+					echo "输入信息不能为空，请重新输入！"
 					continue
 				fi
 
