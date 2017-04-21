@@ -104,7 +104,7 @@ check_arch() {
 		*)
 			cat 1>&2 <<-EOF
 			当前脚本仅支持 64 位系统，你的系统为: $architecture
-			你可以尝试从源码编译 Linux Kernel Library
+			你可以尝试从源码编译安装 Linux Kernel Library
 			    https://github.com/lkl/linux
 			EOF
 			exit 1
@@ -382,7 +382,7 @@ install_haproxy() {
 			do
 				read -p "请输入你的网络接口名称(例如: eth0): " input
 				echo
-				if [ -n "$input" ];
+				if [ -n "$input" ]; then
 					sed -ir "s#^INTERFACE=.*#INTERFACE='"${input}"'#" "$haproxy_lkl_bin"
 				else
 					echo "输入有误，请重新输入！"
