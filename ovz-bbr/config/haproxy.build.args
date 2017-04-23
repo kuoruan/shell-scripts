@@ -1,0 +1,1 @@
+make TARGET=linux2628 ARCH=x86_64 PREFIX=/usr/local/haproxy

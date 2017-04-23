@@ -40,7 +40,7 @@ do_start() {
 		RETVAL=1
 	else
 		echo -n "Starting $BASENAME: "
-		daemon --pidfile=$PIDFILE $HAPROXY_LKL $EXTRAOPTS
+		daemon --pidfile=$PIDFILE $HAPROXY_LKL -p "$PIDFILE" $EXTRAOPTS
 		RETVAL=$?
 		echo
 	fi

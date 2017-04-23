@@ -20,21 +20,19 @@ SERVICE_NAME='haproxy-lkl'
 # Haproxy-lkl 默认安装路径，修改之后需要同时修改服务启动文件
 HAPROXY_LKL_DIR="/usr/local/$SERVICE_NAME"
 
-BASE_URL='https://raw.githubusercontent.com/kuoruan/shell-scripts/master/ovz-bbr'
+BASE_URL='https://raw.githubusercontent.com/kuoruan/shell-scripts/dev/ovz-bbr'
 HAPROXY_BIN_URL="${BASE_URL}/bin/haproxy.linux2628_x86_64"
 HAPROXY_LKL_BIN_URL="${BASE_URL}/bin/haproxy-lkl.sh"
 HAPROXY_LKL_SERVICE_FILE_DEBIAN_URL="${BASE_URL}/startup/haproxy-lkl.init.debain"
 HAPROXY_LKL_SERVICE_FILE_REDHAT_URL="${BASE_URL}/startup/haproxy-lkl.init.redhat"
 HAPROXY_LKL_SYSTEMD_FILE_URL="${BASE_URL}/startup/haproxy-lkl.systemd"
-LKL_LIB_URL="${BASE_URL}/lib64/liblkl-hijack.so-20170419"
-LKL_LIB_MD5='08cccfcdfd106c76b39bc2af783d1c4e'
+LKL_LIB_URL="${BASE_URL}/lib64/liblkl-hijack.so-20170424"
+LKL_LIB_MD5='74508c6e98fc9d106a2ba9edcae47fb3'
 
 # Haproxy 的监听端口
 HAPROXY_LISTEN_PORT=
 # 需要 BBR 加速的端口
 HAPROXY_TARGET_PORT=
-# 创建的 tap 名称，修改后需要同时修改服务启动文件
-LKL_TAP_NAME='lkl'
 
 cat >&2 <<-'EOF'
 #######################################################
@@ -530,7 +528,12 @@ set_config() {
 			read -p "请输入需要加速的端口 [1~65535]: " input
 			echo
 			if [ -n "$input" ] && is_port $input; then
-					HAPROXY_TARGET_PORT="$input"
+					if [ "$HAPROXY_LISTEN_PORT" != "$input" ]; then
+						HAPROXY_TARGET_PORT="$input"
+					else
+						echo "需要加速的端口和 HAporxy 端口不能一致！"
+						continue
+					fi
 			else
 				echo "输入有误, 请输入 1~65535 之间的数字!"
 				continue
