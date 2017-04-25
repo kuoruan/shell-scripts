@@ -19,7 +19,6 @@ HAPROXY_LKL=${HAPROXY_LKL_DIR}/sbin/$BASENAME
 
 PIDFILE=/var/run/${BASENAME}.pid
 CONFIG=${HAPROXY_LKL_DIR}/etc/haproxy.cfg
-EXTRAOPTS=
 
 RETVAL=0
 
@@ -34,7 +33,7 @@ do_start() {
 	fi
 
 	start-stop-daemon --quiet --oknodo --start --pidfile "$PIDFILE" \
-		--exec $HAPROXY_LKL -- -p "$PIDFILE" -e "$EXTRAOPTS" || return 2
+		--exec $HAPROXY_LKL -- -p "$PIDFILE" || return 2
 	return 0
 }
 

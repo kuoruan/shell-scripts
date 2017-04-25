@@ -21,7 +21,6 @@ LKL_IN_CHAIN_NAME='LKL_IN'
 HAPROXY_CFG_FILE="${HAPROXY_LKL_DIR}/etc/haproxy.cfg"
 PIDFILE=
 LOGFILE='/dev/null'
-EXTRAOPTS=
 
 RETVAL=0
 
@@ -31,7 +30,6 @@ usage() {
 
 	Valid options are:
 
-	    -e <opts>           Set extra options
 	    -p <pidfile>        Writes pid to this file
 	    -l <logfile>        Writes log to this file
 	    -c                  Clear haproxy-lkl iptables rules
@@ -54,7 +52,7 @@ make_file_dir() {
 	touch "$file" 2>/dev/null
 }
 
-check_constants() {
+pre_ckeck() {
 	if [ -z "$INTERFACE" ]; then
 		cat >&2 <<-EOF
 		Error: Please set your network interface first.
@@ -68,6 +66,38 @@ check_constants() {
 		Error: Please set your haproxy lkl install dir first.
 		    * Edit $0 and set HAPROXY_LKL_DIR at the top.
 		    * Default is /usr/local/haproxy-lkl
+		EOF
+		exit 1
+	fi
+
+	notice_wrong_interface() {
+		cat >&2 <<-EOF
+		Error: You have set a wrong network interface.
+		    * Edit $0 and reset the INTERFACE at the top.
+		EOF
+		exit 1
+	}
+
+	if command_exists ip; then
+		if ! ( ip -o link show | grep -q "$INTERFACE" ); then
+			notice_wrong_interface
+		fi
+	elif command_exists ifconfig; then
+		if ! ( ifconfig -s | grep -q "$INTERFACE" ); then
+			notice_wrong_interface
+		fi
+	else
+		cat >&2 <<-'EOF'
+		Error: Can't find command ip or ifconfig.
+		Please install first.
+		EOF
+		exit 1
+	fi
+
+	if ! command_exists iptables; then
+		cat >&2 <<-'EOF'
+		Error: Can't find iptables.
+		Please install first.
 		EOF
 		exit 1
 	fi
@@ -98,51 +128,16 @@ set_network() {
 	if command_exists ip; then
 		ip addr add dev ${LKL_TAP_NAME} 10.0.0.1/24 2>/dev/null
 		ip link set dev ${LKL_TAP_NAME} up 2>/dev/null
-
-		if ! ( ip -o link show | grep -q "$INTERFACE" ); then
-			cat >&2 <<-EOF
-			Error: You have set a wrong network interface.
-			    * Edit $0 and reset the INTERFACE at the top.
-			EOF
-			exit 1
-		fi
 	elif command_exists ifconfig; then
 		ifconfig ${LKL_TAP_NAME} 10.0.0.1 netmask 255.255.255.0 up
-
-		if ! ( ifconfig -s | grep -q "$INTERFACE" ); then
-			cat >&2 <<-EOF
-			Error: You have set a wrong network interface.
-			    * Edit $0 and reset the INTERFACE at the top.
-			EOF
-			exit 1
-		fi
-	else
-		cat >&2 <<-'EOF'
-		Error: Can't find command ip or ifconfig.
-		Please install first.
-		EOF
-		exit 1
-	fi
-
-	if ! command_exists iptables; then
-		cat >&2 <<-'EOF'
-		Error: Can't find iptables.
-		Please install first.
-		EOF
-		exit 1
 	fi
 
 	clear_iptables_rules
 
 	iptables -P FORWARD ACCEPT 2>/dev/null
-	iptables -t nat -N ${LKL_IN_CHAIN_NAME} 2>/dev/null
 
-	if ! iptables -t nat -C POSTROUTING -o ${INTERFACE} -j MASQUERADE 2>/dev/null; then
-		iptables -t nat -A POSTROUTING -o ${INTERFACE} -j MASQUERADE 2>/dev/null
-	fi
-	if ! iptables -t nat -C PREROUTING -i ${INTERFACE} -j ${LKL_IN_CHAIN_NAME} 2>/dev/null; then
-		iptables -t nat -A PREROUTING -i ${INTERFACE} -j ${LKL_IN_CHAIN_NAME} 2>/dev/null
-	fi
+	iptables -t nat -N ${LKL_IN_CHAIN_NAME} 2>/dev/null
+	iptables -t nat -A PREROUTING -i ${INTERFACE} -j ${LKL_IN_CHAIN_NAME} 2>/dev/null
 }
 
 generate_config() {
@@ -302,11 +297,11 @@ start_haproxy_lkl() {
 	LKL_HIJACK_NET_NETMASK_LEN=24 \
 	LKL_HIJACK_NET_GATEWAY=10.0.0.1 \
 	LKL_HIJACK_OFFLOAD=0x8883 \
-	$haproxy_bin -f "$HAPROXY_CFG_FILE" $EXTRAOPTS >"$LOGFILE" 2>&1 &
+	$haproxy_bin -f "$HAPROXY_CFG_FILE" >"$LOGFILE" 2>&1 &
 }
 
 do_start() {
-	check_constants
+	pre_check
 	set_network
 	generate_config
 
@@ -318,11 +313,8 @@ do_start() {
 	fi
 }
 
-while getopts "e:p:l:hc" opt; do
+while getopts "p:l:hc" opt; do
 	case "$opt" in
-		e)
-			EXTRAOPTS="$OPTARG"
-			;;
 		c)
 			clear_iptables_rules
 			exit 0

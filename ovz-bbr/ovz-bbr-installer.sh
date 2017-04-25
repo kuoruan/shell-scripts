@@ -217,7 +217,7 @@ get_os_info() {
 
 install_deps() {
 	ip_support_tuntap() {
-		command_exists ip && ip tuntap 2>/dev/null
+		command_exists ip && ip tuntap >/dev/null 2>&1
 	}
 	case "$lsb_dist" in
 		ubuntu|debian|raspbian)

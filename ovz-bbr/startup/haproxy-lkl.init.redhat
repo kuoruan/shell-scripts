@@ -30,7 +30,6 @@ HAPROXY=${HAPROXY_LKL_DIR}/sbin/haproxy
 HAPROXY_LKL=${HAPROXY_LKL_DIR}/sbin/$BASENAME
 
 PIDFILE=/var/run/${BASENAME}.pid
-EXTRAOPTS=
 
 RETVAL=0
 
@@ -40,7 +39,7 @@ do_start() {
 		RETVAL=1
 	else
 		echo -n "Starting $BASENAME: "
-		daemon --pidfile=$PIDFILE $HAPROXY_LKL -p "$PIDFILE" -e "$EXTRAOPTS"
+		daemon --pidfile=$PIDFILE $HAPROXY_LKL -p "$PIDFILE"
 		RETVAL=$?
 		echo
 	fi
