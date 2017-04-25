@@ -6,7 +6,8 @@ After=network.target
 Type=forking
 PIDFile=/var/run/haproxy-lkl.pid
 ExecStart=/usr/local/haproxy-lkl/sbin/haproxy-lkl -p '/var/run/haproxy-lkl.pid'
-ExecStop=/bin/kill -USR2 $MAINPID
+ExecStop=/bin/kill -USR1 $MAINPID
+ExecStopPost=/usr/local/haproxy-lkl/sbin/haproxy-lkl -c >/dev/null 2>&1
 KillMode=mixed
 Restart=always
 

@@ -34,12 +34,14 @@ do_start() {
 	fi
 
 	start-stop-daemon --quiet --oknodo --start --pidfile "$PIDFILE" \
-		--exec $HAPROXY_LKL -- -p "$PIDFILE" \
-		$EXTRAOPTS || return 2
+		--exec $HAPROXY_LKL -- -p "$PIDFILE" -e "$EXTRAOPTS" || return 2
 	return 0
 }
 
 do_stop() {
+	# clear iptables rules
+	$HAPROXY_LKL -c >/dev/null 2>&1
+
 	if [ ! -f $PIDFILE ] ; then
 		# This is a success according to LSB
 		return 3

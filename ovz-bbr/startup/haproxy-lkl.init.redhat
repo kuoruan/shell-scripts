@@ -40,13 +40,16 @@ do_start() {
 		RETVAL=1
 	else
 		echo -n "Starting $BASENAME: "
-		daemon --pidfile=$PIDFILE $HAPROXY_LKL -p "$PIDFILE" $EXTRAOPTS
+		daemon --pidfile=$PIDFILE $HAPROXY_LKL -p "$PIDFILE" -e "$EXTRAOPTS"
 		RETVAL=$?
 		echo
 	fi
 }
 
 do_stop() {
+	# clear iptables rules
+	$HAPROXY_LKL -c >/dev/null 2>&1
+
 	echo -n "Shutting down $BASENAME: "
 	killproc -p $PIDFILE $HAPROXY
 	RETVAL=$?

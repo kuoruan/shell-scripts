@@ -29,10 +29,8 @@ HAPROXY_LKL_SYSTEMD_FILE_URL="${BASE_URL}/startup/haproxy-lkl.systemd"
 LKL_LIB_URL="${BASE_URL}/lib64/liblkl-hijack.so-20170424"
 LKL_LIB_MD5='74508c6e98fc9d106a2ba9edcae47fb3'
 
-# Haproxy 的监听端口
-HAPROXY_LISTEN_PORT=
 # 需要 BBR 加速的端口
-HAPROXY_TARGET_PORT=
+ACCELERATE_PORT=
 
 cat >&2 <<-'EOF'
 #######################################################
@@ -45,7 +43,6 @@ cat >&2 <<-'EOF'
 #           633945405                                 #
 #######################################################
 EOF
-
 
 command_exists() {
 	command -v "$@" >/dev/null 2>&1
@@ -212,8 +209,8 @@ get_os_info() {
 	if [ -z "$lsb_dist" -o -z "$dist_version" ]; then
 		cat >&2 <<-EOF
 		无法确定服务器系统版本信息。
+		请联系脚本作者。
 		EOF
-
 		exit 1
 	fi
 }
@@ -451,8 +448,7 @@ install_haproxy() {
 		exit 1
 	fi
 
-	echo "${HAPROXY_LISTEN_PORT}=${HAPROXY_TARGET_PORT}" \
-		> "${HAPROXY_LKL_DIR}/etc/port-rules"
+	echo "$ACCELERATE_PORT" > "${HAPROXY_LKL_DIR}/etc/port-rules"
 }
 
 install_lkl_lib() {
@@ -506,34 +502,14 @@ set_config() {
 	}
 
 	local input=
-	if [ -z "$HAPROXY_LISTEN_PORT" ] || ! is_port "$HAPROXY_LISTEN_PORT"; then
-		while :
-		do
-			read -p "请输入 HAproxy 运行端口 [1~65535]: " input
-			echo
-			if [ -n "$input" ] && is_port $input; then
-					HAPROXY_LISTEN_PORT="$input"
-			else
-				echo "输入有误, 请输入 1~65535 之间的数字!"
-				continue
-			fi
-			input=
-			break
-		done
-	fi
 
-	if [ -z "$HAPROXY_TARGET_PORT" ] || ! is_port "$HAPROXY_TARGET_PORT"; then
+	if [ -z "$ACCELERATE_PORT" ] || ! is_port "$ACCELERATE_PORT"; then
 		while :
 		do
 			read -p "请输入需要加速的端口 [1~65535]: " input
 			echo
 			if [ -n "$input" ] && is_port $input; then
-					if [ "$HAPROXY_LISTEN_PORT" != "$input" ]; then
-						HAPROXY_TARGET_PORT="$input"
-					else
-						echo "需要加速的端口和 HAporxy 端口不能一致！"
-						continue
-					fi
+					ACCELERATE_PORT="$input"
 			else
 				echo "输入有误, 请输入 1~65535 之间的数字!"
 				continue
@@ -544,8 +520,7 @@ set_config() {
 
 	cat >&2 <<-EOF
 	---------------------------
-	HAproxy 端口 = ${HAPROXY_LISTEN_PORT}
-	加速端口 = ${HAPROXY_TARGET_PORT}
+	加速端口 = ${ACCELERATE_PORT}
 	---------------------------
 	EOF
 
@@ -580,9 +555,9 @@ start_service() {
 		end_install
 	else
 		cat >&2 <<-EOF
-		很遗憾，
-		HAproxy 启动失败，现在还不清楚问题出在哪里，
-		但是你可以到我们的群里反馈一下。
+		很遗憾，服务启动失败。
+		你可以查看上面的日志来获取原因，
+		或者，你可以到我们的群里反馈一下。
 		EOF
 
 		exit 1
@@ -593,11 +568,14 @@ end_install() {
 	clear
 
 	cat >&2 <<-EOF
-	恭喜！
-	HAproxy 和 Linux Kernel Library 安装完成并成功启动
+	恭喜！BBR 安装完成并成功启动
 
-	新端口: ${HAPROXY_LISTEN_PORT}
-	原端口: ${HAPROXY_TARGET_PORT}
+	已加速的端口: ${ACCELERATE_PORT}
+
+	你可以通过修改文件:
+	    ${HAPROXY_LKL_DIR}/etc/port-rules
+
+	来配置需要加速的端口或端口范围。
 	EOF
 	if command_exists systemctl; then
 

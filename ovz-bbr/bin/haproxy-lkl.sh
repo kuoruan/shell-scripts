@@ -16,10 +16,12 @@ EOF
 INTERFACE='venet0'
 HAPROXY_LKL_DIR='/usr/local/haproxy-lkl'
 LKL_TAP_NAME='lkl'
+LKL_IN_CHAIN_NAME='LKL_IN'
 
 HAPROXY_CFG_FILE="${HAPROXY_LKL_DIR}/etc/haproxy.cfg"
 PIDFILE=
 LOGFILE='/dev/null'
+EXTRAOPTS=
 
 RETVAL=0
 
@@ -29,9 +31,11 @@ usage() {
 
 	Valid options are:
 
-	    -p <pidfile>        writes pid to this file
-	    -l <logfile>        writes log to this file
-	    -h                  show this help message
+	    -e <opts>           Set extra options
+	    -p <pidfile>        Writes pid to this file
+	    -l <logfile>        Writes log to this file
+	    -c                  Clear haproxy-lkl iptables rules
+	    -h                  Show this help message
 	EOF
 	exit $1
 }
@@ -40,14 +44,17 @@ command_exists() {
 	command -v "$@" >/dev/null 2>&1
 }
 
-check_constants() {
-	make_file_dir() {
-		local dir="$(dirname $1)"
-		if [ -d "$dir" ]; then
-			mkdir -p "$dir" 2>/dev/null
-		fi
-	}
+make_file_dir() {
+	local file="$1"
+	local dir="$(dirname $file)"
+	if [ ! -d "$dir" ]; then
+		mkdir -p "$dir" 2>/dev/null
+	fi
 
+	touch "$file" 2>/dev/null
+}
+
+check_constants() {
 	if [ -z "$INTERFACE" ]; then
 		cat >&2 <<-EOF
 		Error: Please set your network interface first.
@@ -64,14 +71,13 @@ check_constants() {
 		EOF
 		exit 1
 	fi
+}
 
-	if [ -n "$LOGFILE" ]; then
-		make_file_dir "$LOGFILE"
-	fi
+clear_iptables_rules() {
+	iptables -t nat -D PREROUTING -i ${INTERFACE} -j ${LKL_IN_CHAIN_NAME} 2>/dev/null
 
-	if [ -n "$PIDFILE" ]; then
-		make_file_dir "$PIDFILE"
-	fi
+	iptables -t nat -F ${LKL_IN_CHAIN_NAME} 2>/dev/null
+	iptables -t nat -X ${LKL_IN_CHAIN_NAME} 2>/dev/null
 }
 
 set_network() {
@@ -126,22 +132,20 @@ set_network() {
 		exit 1
 	fi
 
-	iptables -P FORWARD ACCEPT 2>/dev/null
+	clear_iptables_rules
 
-	if ! iptables -t nat -C POSTROUTING -o $INTERFACE -j MASQUERADE 2>/dev/null; then
-		iptables -t nat -A POSTROUTING -o $INTERFACE -j MASQUERADE 2>/dev/null
+	iptables -P FORWARD ACCEPT 2>/dev/null
+	iptables -t nat -N ${LKL_IN_CHAIN_NAME} 2>/dev/null
+
+	if ! iptables -t nat -C POSTROUTING -o ${INTERFACE} -j MASQUERADE 2>/dev/null; then
+		iptables -t nat -A POSTROUTING -o ${INTERFACE} -j MASQUERADE 2>/dev/null
+	fi
+	if ! iptables -t nat -C PREROUTING -i ${INTERFACE} -j ${LKL_IN_CHAIN_NAME} 2>/dev/null; then
+		iptables -t nat -A PREROUTING -i ${INTERFACE} -j ${LKL_IN_CHAIN_NAME} 2>/dev/null
 	fi
 }
 
 generate_config() {
-	is_port() {
-		local port=$1
-
-		[ -n "$port" ] && \
-			`expr $port + 1 >/dev/null 2>&1` && \
-			[ "$port" -ge "1" -a "$port" -le "65535" ]
-	}
-
 	local port_rules_file="${HAPROXY_LKL_DIR}/etc/port-rules"
 
 	if [ ! -r "$port_rules_file" ]; then
@@ -186,30 +190,55 @@ generate_config() {
 	    group haproxy
 	defaults
 	    mode tcp
+	    timeout connect 5s
 	    timeout client 30s
 	    timeout server 30s
-	    timeout connect 5s
+	backend local
+	    server srv 10.0.0.1
 	EOF
 
-	local new_port=
-	local old_port=
 	local legal_rules=
 	local i=0
+
+	add_rule() {
+		local ports="$1"
+
+		legal_rules="$(printf "%s\n%s" "${legal_rules}" "${ports}")"
+		i=`expr $i + 1`
+
+		cat >>"$HAPROXY_CFG_FILE" <<-EOF
+		frontend proxy-${i}
+		    bind 10.0.0.2:${ports}
+		    default_backend local
+		EOF
+
+		iptables -t nat -A ${LKL_IN_CHAIN_NAME} -p tcp \
+			--dport "$(echo "$ports" | tr '-' ':')" -j DNAT \
+			--to-destination 10.0.0.2 2>/dev/null
+	}
+
+	is_port() {
+		local port=$1
+
+		`expr $port + 1 >/dev/null 2>&1` && \
+		[ "$port" -ge "1" -a "$port" -le "65535" ]
+		return $?
+	}
+
+	local start_port=
+	local end_port=
 	for line in $port_rule_lines; do
-		new_port="$(echo $line | cut -d '=' -f1)"
-		old_port="$(echo $line | cut -d '=' -f2)"
+		start_port="$(echo $line | cut -d '-' -f1)"
+		end_port="$(echo $line | cut -d '-' -f2)"
 
-		if ( is_port "$old_port" && is_port "$new_port" ); then
-			legal_rules="$(printf "%s\n%s" "${legal_rules}" "${line}")"
-			i=`expr $i + 1`
-
-			cat >>"$HAPROXY_CFG_FILE" <<-EOF
-			listen proxy${i}
-			    bind 10.0.0.2:${new_port}
-			    server server${i} 10.0.0.1:${old_port}
-			EOF
-
-			forword_port "$new_port" "$old_port"
+		if [ -n "$start_port" -a -n "$end_port" ]; then
+			if ( is_port "$start_port" && is_port "$end_port" ); then
+				add_rule "$line"
+			fi
+		elif [ -n "$start_port" ]; then
+			if is_port "$start_port"; then
+				add_rule "$start_port"
+			fi
 		fi
 	done
 
@@ -225,30 +254,11 @@ generate_config() {
 	if [ -w "$port_rules_file" ]; then
 		cat >"$port_rules_file" <<-EOF
 		# You can config HAproxy-lkl ports in this file.
-		# Format: [new port]=[old port]
-		# Eg. 8833=443
-		# It means HAproxy listen on port 8833,
-		# and 443 is the port you want accelerate.
-		# One rule per line.
+		# Eg. 8800 or 8800-8810
+		# It is the port(s) you want accelerate.
+		# One port(port range) per line.
 		${legal_rules}
 		EOF
-	fi
-}
-
-forword_port() {
-	local new_port=$1
-	local old_port=$2
-
-	if ! iptables -t nat -C PREROUTING -i $INTERFACE -p tcp \
-		--dport $new_port -j DNAT --to-destination 10.0.0.2 2>/dev/null; then
-		iptables -t nat -A PREROUTING -i $INTERFACE -p tcp \
-			--dport $new_port -j DNAT --to-destination 10.0.0.2 2>/dev/null
-	fi
-
-	if ! iptables -t nat -C PREROUTING -i $INTERFACE -p udp \
-		--dport $new_port -j REDIRECT --to-port $old_port 2>/dev/null; then
-		iptables -t nat -A PREROUTING -i $INTERFACE -p udp \
-			--dport $new_port -j REDIRECT --to-port $old_port 2>/dev/null
 	fi
 }
 
@@ -292,7 +302,7 @@ start_haproxy_lkl() {
 	LKL_HIJACK_NET_NETMASK_LEN=24 \
 	LKL_HIJACK_NET_GATEWAY=10.0.0.1 \
 	LKL_HIJACK_OFFLOAD=0x8883 \
-	$haproxy_bin -f "$HAPROXY_CFG_FILE" >"$LOGFILE" 2>&1 &
+	$haproxy_bin -f "$HAPROXY_CFG_FILE" $EXTRAOPTS >"$LOGFILE" 2>&1 &
 }
 
 do_start() {
@@ -308,13 +318,26 @@ do_start() {
 	fi
 }
 
-while getopts "p:l:h" opt; do
+while getopts "e:p:l:hc" opt; do
 	case "$opt" in
+		e)
+			EXTRAOPTS="$OPTARG"
+			;;
+		c)
+			clear_iptables_rules
+			exit 0
+			;;
 		p)
-			PIDFILE="$OPTARG"
+			if [ -n "$OPTARG" ]; then
+				PIDFILE="$OPTARG"
+				make_file_dir "$PIDFILE"
+			fi
 			;;
 		l)
-			LOGFILE="$OPTARG"
+			if [ -n "$OPTARG" ]; then
+				LOGFILE="$OPTARG"
+				make_file_dir "$LOGFILE"
+			fi
 			;;
 		h)
 			usage 0
