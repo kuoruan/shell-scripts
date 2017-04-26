@@ -52,7 +52,7 @@ make_file_dir() {
 	touch "$file" 2>/dev/null
 }
 
-pre_ckeck() {
+pre_check() {
 	if [ -z "$INTERFACE" ]; then
 		cat >&2 <<-EOF
 		Error: Please set your network interface first.
