@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 : <<-'EOF'
 Copyright 2017 Xingwang Liao <kuoruan@gmail.com>
@@ -31,6 +32,8 @@ LKL_LIB_MD5='74508c6e98fc9d106a2ba9edcae47fb3'
 
 # 需要 BBR 加速的端口
 ACCELERATE_PORT=
+
+clear
 
 cat >&2 <<-'EOF'
 #######################################################
@@ -69,7 +72,7 @@ check_ovz() {
 }
 
 check_ldd() {
-	local ldd_version="$(ldd --version | grep 'ldd' | rev | cut -d ' ' -f1 | rev)"
+	local ldd_version="$(ldd --version 2>/dev/null | grep 'ldd' | rev | cut -d ' ' -f1 | rev)"
 	if [ -n "$ldd_version" ]; then
 		if [ "${ldd_version%.*}" -eq "2" -a "${ldd_version#*.}" -lt "14" ] || \
 		[ "${ldd_version%.*}" -lt "2" ]; then
@@ -87,7 +90,7 @@ check_ldd() {
 		最低版本需求 2.14，低于这个版本可能无法正常使用。
 		EOF
 
-		( set -x; ldd --version )
+		( set -x; ldd --version 2>/dev/null )
 		any_key_to_continue
 	fi
 }
@@ -110,13 +113,13 @@ check_arch() {
 
 any_key_to_continue() {
 	echo "请按任意键继续或 Ctrl + C 退出"
-	SAVEDSTTY=`stty -g`
+	local saved="$(stty -g)"
 	stty -echo
 	stty cbreak
 	dd if=/dev/tty bs=1 count=1 2> /dev/null
 	stty -raw
 	stty echo
-	stty $SAVEDSTTY
+	stty $saved
 }
 
 get_os_info() {
@@ -434,8 +437,8 @@ install_haproxy() {
 				)
 			;;
 			*)
-			echo "没有适合当前系统的服务启动脚本文件。"
-			exit 1
+				echo "没有适合当前系统的服务启动脚本文件。"
+				exit 1
 			;;
 		esac
 
