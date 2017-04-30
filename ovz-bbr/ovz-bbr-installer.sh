@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 : <<-'EOF'
 Copyright 2017 Xingwang Liao <kuoruan@gmail.com>
@@ -307,6 +306,38 @@ install_deps() {
 	esac
 }
 
+check_nat_create() {
+	if ( command_exists ip && ip tuntap >/dev/null 2>&1 ); then
+		(
+			set -x
+			ip tuntap del dev lkl-tap-test mode tap >/dev/null 2>&1
+			ip tuntap add dev lkl-tap-test mode tap
+		)
+	elif command_exists tunctl; then
+		(
+			set -x
+			tunctl -d lkl-tap-test >/dev/null 2>&1
+			tunctl -t lkl-tap-test
+		)
+	else
+		cat >&2 <<-'EOF'
+		无法找到已安装的 ip 命令(支持 tuntap) 或者 tunctl
+		应该是脚本自动安装失败了。
+		请手动安装 iproute 和 tunctl
+		EOF
+		exit 1
+	fi
+
+	if [ "$?" != "0" ]; then
+		cat >&2 <<-'EOF'
+		无法创建 NAT 网络。
+		由于某些服务商的 VPS 无法创建 NAT 网络，
+		所以不支持用此方法开启 BBR，安装脚本将会退出。
+		EOF
+		exit 1
+	fi
+}
+
 download_file() {
 	local url=$1
 	local file=$2
@@ -407,11 +438,6 @@ install_haproxy() {
 		haproxy_lkl_startup_file_url="${HAPROXY_LKL_SYSTEMD_FILE_URL}"
 
 		download_file "$haproxy_lkl_startup_file_url" "$haproxy_lkl_startup_file"
-		(
-			set -x
-			systemctl enable "${SERVICE_NAME}.service"
-		)
-
 	elif command_exists service; then
 		haproxy_lkl_startup_file="/etc/init.d/${SERVICE_NAME}"
 		case "$lsb_dist" in
@@ -420,21 +446,12 @@ install_haproxy() {
 
 				download_file "$haproxy_lkl_startup_file_url" "$haproxy_lkl_startup_file"
 				chmod +x "$haproxy_lkl_startup_file"
-				(
-					set -x
-					update-rc.d -f "${SERVICE_NAME}" defaults
-				)
 			;;
 			fedora|centos|redhat|oraclelinux|photon)
 				haproxy_lkl_startup_file_url="${HAPROXY_LKL_SERVICE_FILE_REDHAT_URL}"
 
 				download_file "$haproxy_lkl_startup_file_url" "$haproxy_lkl_startup_file"
 				chmod +x "$haproxy_lkl_startup_file"
-				(
-					set -x
-					chkconfig --add "${SERVICE_NAME}"
-					chkconfig "${SERVICE_NAME}" on
-				)
 			;;
 			*)
 				echo "没有适合当前系统的服务启动脚本文件。"
@@ -539,6 +556,31 @@ is_running() {
 	return $?
 }
 
+enable_service() {
+	if command_exists systemctl; then
+		(
+			set -x
+			systemctl enable "${SERVICE_NAME}.service"
+		)
+	elif command_exists service; then
+		case "$lsb_dist" in
+			ubuntu|debian|raspbian)
+				(
+					set -x
+					update-rc.d -f "${SERVICE_NAME}" defaults
+				)
+			;;
+			fedora|centos|redhat|oraclelinux|photon)
+				(
+					set -x
+					chkconfig --add "${SERVICE_NAME}"
+					chkconfig "${SERVICE_NAME}" on
+				)
+			;;
+		esac
+	fi
+}
+
 start_service() {
 	if command_exists systemctl; then
 		(
@@ -554,15 +596,13 @@ start_service() {
 		)
 	fi
 
-	if [ "$?" = "0" ] && is_running; then
-		end_install
-	else
+	if [ "$?" != "0" ] || ! is_running; then
+		do_uninstall
 		cat >&2 <<-EOF
 		很遗憾，服务启动失败。
 		你可以查看上面的日志来获取原因，
 		或者，你可以到我们的群里反馈一下。
 		EOF
-
 		exit 1
 	fi
 }
@@ -606,6 +646,44 @@ end_install() {
 	EOF
 }
 
+do_uninstall() {
+	if command_exists systemctl; then
+		systemctl stop "${SERVICE_NAME}.service" 2>/dev/null
+		(
+			set -x
+			systemctl disable "${SERVICE_NAME}.service" 2>/dev/null
+			rm -f "/lib/systemd/system/${SERVICE_NAME}.service"
+		)
+	elif command_exists service; then
+		service "${SERVICE_NAME}" stop 2>/dev/null
+		case "$lsb_dist" in
+			ubuntu|debian|raspbian)
+				(
+					set -x
+					update-rc.d -f "${SERVICE_NAME}" remove 2>/dev/null
+				)
+			;;
+			fedora|centos|redhat|oraclelinux|photon)
+				(
+					set -x
+					chkconfig "${SERVICE_NAME}" off 2>/dev/null
+					chkconfig --del "${SERVICE_NAME}" 2>/dev/null
+				)
+			;;
+		esac
+		(
+			set -x
+			rm -f "/etc/init.d/${SERVICE_NAME}"
+		)
+	fi
+
+	(
+		set -x
+		${HAPROXY_LKL_DIR}/sbin/${SERVICE_NAME} -c 2>/dev/null
+		rm -rf "${HAPROXY_LKL_DIR}"
+	)
+}
+
 do_install() {
 	check_root
 	check_ovz
@@ -614,10 +692,23 @@ do_install() {
 	get_os_info
 	set_config
 	install_deps
+	enable_ip_forward
+	check_nat_create
 	install_haproxy
 	install_lkl_lib
-	enable_ip_forward
 	start_service
+	enable_service
+	end_install
 }
 
-do_install
+action=${1:-"install"}
+case "$action" in
+	install|uninstall)
+		do_${action}
+	;;
+	*)
+		cat >&2 <<-EOF
+		参数有误，请使用 $(basename $0) install|uninstall
+		EOF
+		exit 255
+esac
