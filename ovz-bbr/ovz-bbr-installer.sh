@@ -354,12 +354,19 @@ download_file() {
 }
 
 install_haproxy() {
-	set -x
-	mkdir -p "${HAPROXY_LKL_DIR}"/etc \
-		"${HAPROXY_LKL_DIR}"/lib64 \
-		"${HAPROXY_LKL_DIR}"/sbin
-	useradd -U -s '/usr/sbin/nologin' -d '/nonexistent' haproxy 2>/dev/null
-	set +x
+	(
+		set -x
+		mkdir -p "${HAPROXY_LKL_DIR}"/etc \
+			"${HAPROXY_LKL_DIR}"/lib64 \
+			"${HAPROXY_LKL_DIR}"/sbin
+	)
+
+	if ! grep -q '^haproxy:' '/etc/passwd'; then
+		(
+			set -x
+			useradd -U -s '/usr/sbin/nologin' -d '/nonexistent' haproxy 2>/dev/null
+		)
+	fi
 
 	local haproxy_bin="${HAPROXY_LKL_DIR}/sbin/haproxy"
 	download_file "$HAPROXY_BIN_URL" "$haproxy_bin"
@@ -640,7 +647,7 @@ end_install() {
 	服务已自动加入开机启动，请放心使用。
 
 	如果这个脚本帮到了你，你可以请作者喝瓶可乐:
-		https://blog.kuoruan.com/donate
+	  https://blog.kuoruan.com/donate
 
 	享受加速的快感吧！
 	EOF
