@@ -2117,13 +2117,18 @@ do_uninstall() {
 	any_key_to_continue
 	echo "正在卸载 Kcptun 服务端并停止 Supervisor..."
 
+	if command_exists supervisorctl; then
+		supervisorctl shutdown
+	fi
+
+	if command_exists systemctl; then
+		systemctl stop supervisord.service
+	elif command_exists serice; then
+		service supervisord stop
+	fi
+
 	(
 		set -x
-		if command_exists systemctl; then
-			systemctl stop supervisord.service
-		elif command_exists serice; then
-			service supervisord stop
-		fi
 		rm -f "/etc/supervisor/conf.d/kcptun*.conf"
 		rm -rf "$KCPTUN_INSTALL_DIR"
 		rm -rf "$KCPTUN_LOG_DIR"
