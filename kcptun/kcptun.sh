@@ -1734,13 +1734,11 @@ gen_kcptun_config() {
 		mk_file_dir "$snmplog" '777'
 	fi
 
-	if ( echo "$listen_addr" | grep -q ":" ) && \
-		[ "$listen_addr" != "${listen_addr#*:[0-9a-fA-F]}" ]; then
+	if ( echo "$listen_addr" | grep -q ":" ); then
 		listen_addr="[${listen_addr}]"
 	fi
 
-	if ( echo "$target_addr" | grep -q ":" ) && \
-		[ "$target_addr" != "${target_addr#*:[0-9a-fA-F]}" ]; then
+	if ( echo "$target_addr" | grep -q ":" ); then
 		target_addr="[${target_addr}]"
 	fi
 
@@ -1954,12 +1952,14 @@ load_instance_config() {
 	done
 
 	if [ -n "$listen" ]; then
-		listen_addr="$(echo "$listen" | cut -d ':' -f1)"
-		listen_port="$(echo "$listen" | cut -d ':' -f2)"
+		listen_port="$(echo "$listen" | rev | cut -d ':' -f1 | rev)"
+		listen_addr="$(echo "$listen" | sed "s/:${listen_port}$//" | grep -oE '[0-9a-fA-F\.:]*')"
+		listen=
 	fi
 	if [ -n "$target" ]; then
-		target_addr="$(echo "$target" | cut -d ':' -f1)"
-		target_port="$(echo "$target" | cut -d ':' -f2)"
+		target_port="$(echo "$target" | rev | cut -d ':' -f1 | rev)"
+		target_addr="$(echo "$target" | sed "s/:${target_port}$//" | grep -oE '[0-9a-fA-F\.:]*')"
+		target=
 	fi
 
 	if [ -n "$listen_port" ]; then
@@ -2559,7 +2559,9 @@ manual_install() {
 		if [ "$?" != "0" ]; then
 			cat >&2 <<-EOF
 			未找到对应版本下载地址 (TAG: ${tag_name}), 请重新输入!
-			你可以前往: ${KCPTUN_TAGS_URL} 查看所有可用 TAG
+			你可以前往:
+			  ${KCPTUN_TAGS_URL}
+			查看所有可用 TAG
 			EOF
 			tag_name=
 			continue
@@ -2569,7 +2571,7 @@ manual_install() {
 			EOF
 			any_key_to_continue
 
-			install_kcptun
+			install_kcptun "$tag_name"
 			start_supervisor
 			show_version_and_client_url
 			break
@@ -2595,13 +2597,13 @@ is_installed() {
 	if [ -d '/usr/share/kcptun' ]; then
 		(
 			set -x
-			cp -rf '/usr/share/kcptun' "$KCPTUN_INSTALL_DIR" \
-				&& rm -rf '/usr/share/kcptun'
+			cp -rf '/usr/share/kcptun' "$KCPTUN_INSTALL_DIR" && \
+				rm -rf '/usr/share/kcptun'
 		)
 	fi
 
-	if [ -d '/etc/supervisor/conf.d/' ] && [ -d "$KCPTUN_INSTALL_DIR" ] \
-		&& [ -n "$(get_installed_version)" ]; then
+	if [ -d '/etc/supervisor/conf.d/' ] && [ -d "$KCPTUN_INSTALL_DIR" ] && \
+		[ -n "$(get_installed_version)" ]; then
 		return 0
 	fi
 
