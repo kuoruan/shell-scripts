@@ -84,6 +84,7 @@ cat >&2 <<-'EOF'
 # 作者博客: https://blog.kuoruan.com/                   #
 # Github: https://github.com/kuoruan/kcptun_installer   #
 # QQ交流群: 43391448, 68133628                          #
+#           633945405                                   #
 #########################################################
 EOF
 
@@ -487,7 +488,11 @@ get_current_file() {
 
 # 获取实例数量
 get_instance_count() {
-	ls -l '/etc/supervisor/conf.d/' | grep "^-" | awk '{print $9}' | grep -cP "^kcptun\d*\.conf$"
+	if [ -d '/etc/supervisor/conf.d/' ]; then
+		ls -l '/etc/supervisor/conf.d/' | grep "^-" | awk '{print $9}' | grep -cP "^kcptun\d*\.conf$"
+	else
+		echo "0"
+	fi
 }
 
 get_kcptun_version_info() {
