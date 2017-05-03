@@ -1,0 +1,90 @@
+#! /bin/bash
+#
+# chkconfig:    345 83 04
+# description: Supervisor is a client/server system that allows \
+#   its users to monitor and control a number of processes on \
+#   UNIX-like operating systems.
+# processname: supervisord
+# config: /etc/supervisor/supervisord.conf
+# pidfile: /var/run/supervisord.pid
+#
+### BEGIN INIT INFO
+# Provides: supervisord
+# Required-Start: $all
+# Required-Stop: $all
+# Short-Description: start and stop Supervisor process control system
+# Description: Supervisor is a client/server system that allows
+#   its users to monitor and control a number of processes on
+#   UNIX-like operating systems.
+### END INIT INFO
+
+# Source function library
+. /etc/rc.d/init.d/functions
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+PREFIX=/usr/local/bin
+SUPERVISORD=$PREFIX/supervisord
+SUPERVISORCTL=$PREFIX/supervisorctl
+NAME=supervisord
+PIDFILE=/var/run/supervisord.pid
+OPTIONS="-c /etc/supervisor/supervisord.conf"
+STOP_TIMEOUT=10
+RETVAL=0
+
+test -x $SUPERVISORD || exit 1
+
+do_start() {
+    if status -p $PIDFILE $SUPERVISORD >&/dev/null; then
+        echo "$NAME is already running."
+        RETVAL=0
+    else
+        echo -n $"Starting $NAME: "
+        daemon --pidfile=$PIDFILE $SUPERVISORD $OPTIONS -j $PIDFILE
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && $SUPERVISORCTL $OPTIONS status
+    fi
+
+}
+
+do_stop() {
+    if status -p $PIDFILE $SUPERVISORD >&/dev/null; then
+        echo -n $"Stopping $NAME: "
+        killproc -p $PIDFILE -d $STOP_TIMEOUT $SUPERVISORD
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -rf $PIDFILE
+    else
+        echo "$NAME is not running."
+        RETVAL=0
+    fi
+}
+
+chk_status() {
+    status -p $PIDFILE $SUPERVISORD
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && $SUPERVISORCTL $OPTIONS status
+}
+
+case "$1" in
+    start)
+        do_start
+        ;;
+    stop)
+        do_stop
+        ;;
+    status)
+        chk_status
+        ;;
+    restart)
+        do_stop
+        do_start
+        ;;
+    *)
+        echo $"Usage: /etc/init.d/$NAME {start|stop|restart|status}"
+        RETVAL=2
+        ;;
+esac
+
+exit $RETVAL
