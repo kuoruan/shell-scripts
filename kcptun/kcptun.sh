@@ -82,7 +82,7 @@ cat >&2 <<-'EOF'
 # 该脚本支持 Kcptun 服务端的安装、更新、卸载及配置      #
 # 脚本作者: Index <kuoruan@gmail.com>                   #
 # 作者博客: https://blog.kuoruan.com/                   #
-# Github: https://github.com/kuoruan/kcptun_installer   #
+# Github: https://github.com/kuoruan/shell-scripts      #
 # QQ交流群: 43391448, 68133628                          #
 #           633945405                                   #
 #########################################################
