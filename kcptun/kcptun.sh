@@ -2203,13 +2203,6 @@ do_update() {
 	你选择了检查更新, 正在开始操作...
 	EOF
 
-	if [ -d '/usr/share/kcptun' ]; then
-		(
-			set -x
-			mv -f '/usr/share/kcptun' "$KCPTUN_INSTALL_DIR"
-		)
-	fi
-
 	if get_shell_version_info; then
 		local shell_path=$0
 
@@ -2595,6 +2588,13 @@ pre_ckeck() {
 
 is_installed() {
 	if [ -d '/usr/share/kcptun' ]; then
+		cat >&2 <<-EOF
+		检测发现你由旧版升级到了新版
+		新版中将默认安装目录设置为了 ${KCPTUN_INSTALL_DIR}
+		脚本会自动将文件从旧版目录 /usr/share/kcptun
+		移动到新版目录 ${KCPTUN_INSTALL_DIR}
+		EOF
+		any_key_to_continue
 		(
 			set -x
 			cp -rf '/usr/share/kcptun' "$KCPTUN_INSTALL_DIR" && \
