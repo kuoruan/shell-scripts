@@ -2009,9 +2009,14 @@ show_current_instance_info() {
 	show_version_and_client_url
 
 	install_jq
-	local client_config="{}"
-	client_config="$(echo "$client_config" | $JQ_BIN -r ".localaddr=\":${target_port}\"")"
-	client_config="$(echo "$client_config" | $JQ_BIN -r ".remoteaddr=\"${server_ip}:${listen_port}\"")"
+	local client_config=
+	read -d '' client_config <<-EOF
+	{
+	  "localaddr": ":${target_port}",
+	  "remoteaddr": "${server_ip}:${listen_port}",
+	  "key": "${key}"
+	}
+	EOF
 
 	gen_client_configs() {
 		local k; local v
@@ -2034,7 +2039,7 @@ show_current_instance_info() {
 		done
 	}
 
-	gen_client_configs "key" "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
+	gen_client_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
 		"parityshard" "dscp" "nocomp" "nodelay" "interval" "resend" \
 		"nc" "acknodelay" "sockbuf" "keepalive"
 
@@ -2092,6 +2097,12 @@ do_install() {
 	set_firewall
 	start_supervisor
 	enable_supervisor
+
+	cat >&2 <<-EOF
+
+	恭喜! Kcptun 服务端安装成功。
+	EOF
+
 	show_current_instance_info
 
 	cat >&2 <<-EOF
