@@ -241,6 +241,11 @@ install_deps() {
 				( set -x; sleep 3; apt-get install -y -q iproute )
 			fi
 
+			if ! command_exists timeout; then
+				apt_get_update
+				( set -x; sleep 3; apt-get install -y -q coreutils )
+			fi
+
 			if ! command_exists iptables; then
 				apt_get_update
 				( set -x; sleep 3; apt-get install -y -q iptables )
@@ -258,7 +263,11 @@ install_deps() {
 				fi
 
 				if ! command_exists ip; then
-					( set -x; sleep 3; dnf -y -q install -y -q iproute )
+					( set -x; sleep 3; dnf -y -q install iproute )
+				fi
+
+				if ! command_exists timeout; then
+					( set -x; sleep 3; dnf -y -q install coreutils )
 				fi
 
 				if ! command_exists iptables; then
@@ -272,12 +281,19 @@ install_deps() {
 				if ! command_exists wget; then
 					( set -x; sleep 3; tdnf -y install wget ca-certificates )
 				fi
+
 				if ! command_exists ip; then
-					( set -x; sleep 3; tdnf -y install -y -q iproute )
+					( set -x; sleep 3; tdnf -y install iproute )
 				fi
+
+				if ! command_exists timeout; then
+					( set -x; sleep 3; tdnf -y install coreutils )
+				fi
+
 				if ! command_exists iptables; then
 					( set -x; sleep 3; tdnf -y install iptables )
 				fi
+
 				if ! ip_support_tuntap && ! command_exists tunctl; then
 					( set -x; sleep 3; tdnf -y install tunctl )
 				fi
@@ -285,12 +301,19 @@ install_deps() {
 				if ! command_exists wget; then
 					( set -x; sleep 3; yum -y -q install wget ca-certificates )
 				fi
+
 				if ! command_exists ip; then
-					( set -x; sleep 3; tdnf -y install -y -q iproute )
+					( set -x; sleep 3; yum -y -q install iproute )
 				fi
+
+				if ! command_exists timeout; then
+					( set -x; sleep 3; yum -y -q install coreutils )
+				fi
+
 				if ! command_exists iptables firewall-cmd; then
 					( set -x; sleep 3; yum -y -q install iptables )
 				fi
+
 				if ! ip_support_tuntap && ! command_exists tunctl; then
 					( set -x; sleep 3; yum -y -q install tunctl )
 				fi
@@ -558,7 +581,11 @@ is_running() {
 	(
 		set -x
 		sleep 3
-		ping -q -c3 10.0.0.2 2>/dev/null
+		# https://bugs.centos.org/view.php?id=12407
+		# ping may not work with IPv4 under OpenVZ on CentOS 7
+
+		# ping -q -c3 10.0.0.2 2>/dev/null
+		timeout 2 bash -c "</dev/tcp/10.0.0.2/${ACCELERATE_PORT}" 2>/dev/null
 	)
 	return $?
 }
