@@ -681,6 +681,9 @@ end_install() {
 }
 
 do_uninstall() {
+	check_root
+	get_os_info
+
 	if command_exists systemctl; then
 		systemctl stop "${SERVICE_NAME}.service" 2>/dev/null
 		(
