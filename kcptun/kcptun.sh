@@ -271,7 +271,7 @@ get_os_info() {
 			;;
 	esac
 
-	if [ -z "$lsb_dist" -o -z "$dist_version" ]; then
+	if [ -z "$lsb_dist" ] || [ -z "$dist_version" ]; then
 		cat >&2 <<-EOF
 		无法确定服务器系统版本信息。
 		请联系脚本作者。
@@ -319,7 +319,7 @@ get_content() {
 
 		content="$(wget -qO- --no-check-certificate "$url")"
 
-		if [ "$?" != "0" -o -z "$content" ]; then
+		if [ "$?" != "0" ] || [ -z "$content" ]; then
 			retry=$(expr $retry + 1)
 			get_network_content
 		fi
@@ -337,7 +337,7 @@ download_file() {
 	local verify_cmd=
 
 	verify_file() {
-		if [ -z "$verify_cmd" -a -n "$verify" ]; then
+		if [ -z "$verify_cmd" ] && [ -n "$verify" ]; then
 			if [ "${#verify}" = "32" ]; then
 				verify_cmd="md5sum"
 			elif [ "${#verify}" = "40" ]; then
@@ -353,7 +353,7 @@ download_file() {
 			fi
 		fi
 
-		if [ -s "$file" -a -n "$verify_cmd" ]; then
+		if [ -s "$file" ] && [ -n "$verify_cmd" ]; then
 			(
 				set -x
 				echo "${verify}  ${file}" | $verify_cmd -c
@@ -462,7 +462,7 @@ get_json_string() {
 	if [ -n "$content" ]; then
 		str="$(echo "$content" | $JQ_BIN -r "$selector" 2>/dev/null)"
 
-		if [ -n "$str" -a -n "$regex" ]; then
+		if [ -n "$str" ] && [ -n "$regex" ]; then
 			str="$(echo "$str" | grep -oE "$regex")"
 		fi
 	fi
@@ -763,7 +763,7 @@ install_supervisor() {
 		exit 1
 	fi
 
-	if ! ( easy_install --version >/dev/null 2>&1 ); then
+	if ! ( easy_install --help >/dev/null 2>&1 ); then
 		cat >&2 <<-EOF
 		检测到你的 easy_install 已损坏，
 		通常是由于你自己升级过 python 版本，
@@ -957,7 +957,7 @@ set_kcptun_config() {
 	is_port() {
 		local port=$1
 		is_number "$port" && \
-			[ $port -ge 1 -a $port -le 65535 ]
+			[ $port -ge 1 ] && [ $port -le 65535 ]
 	}
 
 	port_using() {
@@ -1109,7 +1109,7 @@ set_kcptun_config() {
 
 		read -p "(默认: ${crypt}) 请选择 [1~$i]: " input
 		if [ -n "$input" ]; then
-			if is_number "$input" && [ $input -ge 1 -a $input -le $i ]; then
+			if is_number "$input" && [ $input -ge 1 ] && [ $input -le $i ]; then
 				crypt=${crypt_list[$(expr $input - 1)]}
 			else
 				echo "请输入有效数字 1~$i!"
@@ -1149,7 +1149,7 @@ set_kcptun_config() {
 
 		read -p "(默认: ${mode}) 请选择 [1~$i]: " input
 		if [ -n "$input" ]; then
-			if is_number "$input" && [ $input -ge 1 -a $input -le $i ]; then
+			if is_number "$input" && [ $input -ge 1 ] && [ $input -le $i ]; then
 				mode=${mode_list[$(expr $input - 1)]}
 			else
 				echo "请输入有效数字 1~$i!"
@@ -1768,7 +1768,7 @@ gen_kcptun_config() {
 			v="$(eval echo "\$$k")"
 
 			if [ -n "$v" ]; then
-				if is_number "$v" || [ "$v" = "false" -o "$v" = "true" ]; then
+				if is_number "$v" || [ "$v" = "false" ] || [ "$v" = "true" ]; then
 					json="$(echo "$json" | $JQ_BIN ".$k=$v")"
 				else
 					json="$(echo "$json" | $JQ_BIN ".$k=\"$v\"")"
@@ -1776,7 +1776,7 @@ gen_kcptun_config() {
 			fi
 		done
 
-		if [ -n "$json" -a "$json" != "$(cat "$config_file")" ]; then
+		if [ -n "$json" ] && [ "$json" != "$(cat "$config_file")" ]; then
 			echo "$json" >"$config_file"
 		fi
 	}
@@ -1875,7 +1875,7 @@ select_instance() {
 		do
 			read -p "请选择 [1~${i}]: " sel
 			if [ -n "$sel" ]; then
-				if ! is_number "$sel" || [ $sel -lt 1 -o $sel -gt $i ]; then
+				if ! is_number "$sel" || [ $sel -lt 1 ] || [ $sel -gt $i ]; then
 					cat >&2 <<-EOF
 					请输入有效数字 1~${i}!
 					EOF
@@ -1947,7 +1947,7 @@ load_instance_config() {
 
 	local lines="$(get_json_string "$config_content" 'to_entries | map("\(.key)=\(.value | @sh)") | .[]')"
 
-	for line in "$lines"; do
+	for line in $lines; do
 		eval "$line"
 	done
 
@@ -2030,7 +2030,7 @@ show_current_instance_info() {
 			fi
 
 			if [ -n "$v" ]; then
-				if is_number "$v" || [ "$v" = "true" -o "$v" = "false" ]; then
+				if is_number "$v" || [ "$v" = "true" ] || [ "$v" = "false" ]; then
 					client_config="$(echo "$client_config" | $JQ_BIN -r ".${k}=${v}")"
 				else
 					client_config="$(echo "$client_config" | $JQ_BIN -r ".${k}=\"${v}\"")"
@@ -2284,7 +2284,7 @@ do_update() {
 		cur_tag_name=v"$cur_tag_name"
 	fi
 
-	if [ -n "$kcptun_release_tag_name" -a "$kcptun_release_tag_name" != "$cur_tag_name" ]; then
+	if [ -n "$kcptun_release_tag_name" ] && [ "$kcptun_release_tag_name" != "$cur_tag_name" ]; then
 		cat >&2 <<-EOF
 		发现 Kcptun 新版本 ${kcptun_release_tag_name}
 		$([ "$kcptun_release_prerelease" = "true" ] && printf "\033[41;37m 注意: 该版本为预览版, 请谨慎更新 \033[0m")
@@ -2510,7 +2510,7 @@ instance_reconfig() {
 	set_firewall
 
 	if command_exists supervisorctl; then
-		supervisorctl reload "kcptun${current_instance_id}"
+		supervisorctl restart "kcptun${current_instance_id}"
 	else
 		start_supervisor
 	fi
@@ -2552,7 +2552,7 @@ manual_install() {
 		fi
 
 		local version_num=$(echo "$tag_name" | grep -oE "[0-9]+" || "0")
-		if [ ${#version_num} -eq 8 -a $version_num -le 20160826 ]; then
+		if [ ${#version_num} -eq 8 ] && [ $version_num -le 20160826 ]; then
 			echo "不支持安装 v20160826 及以前版本"
 			tag_name=
 			continue
