@@ -1963,9 +1963,12 @@ load_instance_config() {
 	local lines=
 	lines="$(get_json_string "$config_content" 'to_entries | map("\(.key)=\(.value | @sh)") | .[]')"
 
+	OLDIFS=$IFS
+	IFS=$'\n'
 	for line in $lines; do
 		eval "$line"
 	done
+	IFS=$OLDIFS
 
 	if [ -n "$listen" ]; then
 		listen_port="$(echo "$listen" | rev | cut -d ':' -f1 | rev)"
