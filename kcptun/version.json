@@ -1,7 +1,7 @@
 {
-	"shell_version": 18,
+	"shell_version": 19,
 	"shell_url": "https://github.com/kuoruan/shell-scripts/raw/master/kcptun/kcptun.sh",
-	"change_log": "1.修复默认加密方式的输入错误;\n2.修复当key设置为纯数字时，客户端配置输出错误;\n3.修复服务端sndwnd和rcvwnd交换的问题",
+	"change_log": "1.修复当 key 含有空格时，加载出错的问题;\n2.修复某些vps无法正确获取 easy_install 版本信息的问题",
 	"config_version": 6,
 	"config_change_log": "1.支持 snmp 和 pprof 参数;\n2.输出新版手机端参数",
 	"init_version": 3,
