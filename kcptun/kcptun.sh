@@ -43,7 +43,6 @@ SUPERVISOR_SYSTEMD_FILE_URL="${BASE_URL}/startup/supervisord.systemd"
 
 # 默认参数
 # =======================
-D_LISTEN_ADDR=''
 D_LISTEN_PORT=29900
 D_TARGET_ADDR='127.0.0.1'
 D_TARGET_PORT=12984
@@ -131,7 +130,8 @@ is_number() {
 
 any_key_to_continue() {
 	echo "请按任意键继续或 Ctrl + C 退出"
-	local saved="$(stty -g)"
+	local saved=
+	saved="$(stty -g)"
 	stty -echo
 	stty cbreak
 	dd if=/dev/tty bs=1 count=1 2>/dev/null
@@ -141,7 +141,8 @@ any_key_to_continue() {
 }
 
 check_root() {
-	local user="$(id -un 2>/dev/null || true)"
+	local user=
+	user="$(id -un 2>/dev/null || true)"
 	if [ "$user" != "root" ]; then
 		cat >&2 <<-'EOF'
 		权限错误, 请使用 root 用户运行此脚本!
@@ -418,7 +419,8 @@ install_jq() {
 	}
 
 	if [ -z "$is_checkd_jq" ] && ! check_jq; then
-		local dir="$(dirname "$JQ_BIN")"
+		local dir=
+		dir="$(dirname "$JQ_BIN")"
 		if [ ! -d "$dir" ]; then
 			(
 				set -x
@@ -500,7 +502,8 @@ get_kcptun_version_info() {
 
 	local version_content=
 	if [ -n "$request_version" ]; then
-		local json_content="$(get_content "$KCPTUN_RELEASES_URL")"
+		local json_content=
+		json_content="$(get_content "$KCPTUN_RELEASES_URL")"
 		version_content="$(get_json_string "$json_content" ".[] | select(.tag_name == \"${request_version}\")")"
 	else
 		version_content="$(get_content "$KCPTUN_LATEST_RELEASE_URL")"
@@ -526,11 +529,13 @@ get_kcptun_version_info() {
 	kcptun_release_publish_time="$(get_json_string "$version_content" '.published_at')"
 	kcptun_release_html_url="$(get_json_string "$version_content" '.html_url')"
 
-	local body="$(get_json_string "$version_content" '.body' | grep -vE '(^```)|(^>)|(^[[:space:]]*$)')"
+	local body=
+	body="$(get_json_string "$version_content" '.body' | grep -vE '(^```)|(^>)|(^[[:space:]]*$)')"
 
 	kcptun_release_body="$(echo "$body" | grep -vE "[0-9a-zA-Z]{32,}")"
 
-	local file_verify="$(echo "$body" | grep "$spruce_type")"
+	local file_verify=
+	file_verify="$(echo "$body" | grep "$spruce_type")"
 
 	if [ -n "$file_verify" ]; then
 		local i=1
@@ -554,7 +559,8 @@ get_kcptun_version_info() {
 }
 
 get_shell_version_info() {
-	local shell_version_content="$(get_content "$SHELL_VERSION_INFO_URL")"
+	local shell_version_content=
+	shell_version_content="$(get_content "$SHELL_VERSION_INFO_URL")"
 	if [ -z "$shell_version_content" ]; then
 		return 1
 	fi
@@ -608,7 +614,8 @@ install_kcptun() {
 		sleep 3
 	)
 
-	local kcptun_server_file="$(get_kcptun_server_file)"
+	local kcptun_server_file=
+	kcptun_server_file="$(get_kcptun_server_file)"
 
 	if [ ! -f "$kcptun_server_file" ]; then
 		cat >&2 <<-'EOF'
@@ -771,7 +778,7 @@ install_supervisor() {
 		需要手动做一个软链接
 		 * ln -s /usr/local/python2.7/bin/easy_install /usr/bin/easy_install
 
-		 “/usr/local/python2.7” 应该为你新版本 python 的路径
+		 "/usr/local/python2.7" 应该为你新版本 python 的路径
 		EOF
 		exit 1
 	fi
@@ -1709,7 +1716,8 @@ set_hidden_parameters() {
 
 gen_kcptun_config() {
 	mk_file_dir() {
-		local dir="$(dirname $1)"
+		local dir=
+		dir="$(dirname $1)"
 		local mod=$2
 
 		if [ ! -d "$dir" ]; then
@@ -1724,8 +1732,10 @@ gen_kcptun_config() {
 		fi
 	}
 
-	local config_file="$(get_current_file 'config')"
-	local supervisor_config_file="$(get_current_file 'supervisor')"
+	local config_file=
+	config_file="$(get_current_file 'config')"
+	local supervisor_config_file=
+	supervisor_config_file="$(get_current_file 'supervisor')"
 
 	mk_file_dir "$config_file"
 	mk_file_dir "$supervisor_config_file"
@@ -1763,8 +1773,9 @@ gen_kcptun_config() {
 		install_jq
 		local k; local v
 
-		local json="$(cat "$config_file")"
-		for k in $*; do
+		local json=
+		json="$(cat "$config_file")"
+		for k in "$@"; do
 			v="$(eval echo "\$$k")"
 
 			if [ -n "$v" ]; then
@@ -1856,12 +1867,13 @@ set_firewall() {
 
 # 选择一个实例
 select_instance() {
-	if [ $(get_instance_count) -gt 1 ]; then
+	if [ "$(get_instance_count)" -gt 1 ]; then
 		cat >&2 <<-'EOF'
 		当前有多个 Kcptun 实例 (按最后修改时间排序):
 		EOF
 
-		local files=$(ls -lt '/etc/supervisor/conf.d/' | grep "^-" | awk '{print $9}' | grep "^kcptun[0-9]*\.conf$")
+		local files=
+		files=$(ls -lt '/etc/supervisor/conf.d/' | grep "^-" | awk '{print $9}' | grep "^kcptun[0-9]*\.conf$")
 		local i=0
 		local array=()
 		for file in $files; do
@@ -1914,7 +1926,8 @@ get_new_instance_id() {
 }
 
 get_installed_version() {
-	local server_file="$(get_kcptun_server_file)"
+	local server_file=
+	server_file="$(get_kcptun_server_file)"
 
 	if [ -f "$server_file" ]; then
 		if [ ! -x "$server_file" ]; then
@@ -1926,7 +1939,8 @@ get_installed_version() {
 }
 
 load_instance_config() {
-	local config_file="$(get_current_file 'config')"
+	local config_file=
+	config_file="$(get_current_file 'config')"
 
 	if [ ! -s "$config_file" ]; then
 		cat >&2 <<-'EOF'
@@ -1935,7 +1949,8 @@ load_instance_config() {
 		exit 1
 	fi
 
-	local config_content="$(cat ${config_file})"
+	local config_content=
+	config_content="$(cat ${config_file})"
 
 	if [ -z "$(get_json_string "$config_content" '.listen')" ]; then
 		cat >&2 <<-EOF
@@ -1945,7 +1960,8 @@ load_instance_config() {
 		exit 1
 	fi
 
-	local lines="$(get_json_string "$config_content" 'to_entries | map("\(.key)=\(.value | @sh)") | .[]')"
+	local lines=
+	lines="$(get_json_string "$config_content" 'to_entries | map("\(.key)=\(.value | @sh)") | .[]')"
 
 	for line in $lines; do
 		eval "$line"
@@ -1968,7 +1984,8 @@ load_instance_config() {
 }
 
 show_version_and_client_url() {
-	local version="$(get_installed_version)"
+	local version=
+	version="$(get_installed_version)"
 	if [ -n "$version" ]; then
 		cat >&2 <<-EOF
 
@@ -1986,7 +2003,8 @@ show_version_and_client_url() {
 }
 
 show_current_instance_info() {
-	local server_ip="$(get_server_ip)"
+	local server_ip=
+	server_ip="$(get_server_ip)"
 
 	printf "服务器IP: \033[41;37m ${server_ip} \033[0m\n"
 	printf "端口: \033[41;37m ${listen_port} \033[0m\n"
@@ -1994,7 +2012,7 @@ show_current_instance_info() {
 
 	show_configs() {
 		local k; local v
-		for k in $*; do
+		for k in "$@"; do
 			v="$(eval echo "\$$k")"
 			if [ -n "$v" ]; then
 				printf "${k}: \033[41;37m ${v} \033[0m\n"
@@ -2020,7 +2038,7 @@ show_current_instance_info() {
 
 	gen_client_configs() {
 		local k; local v
-		for k in $*; do
+		for k in "$@"; do
 			if [ "$k" = "sndwnd" ]; then
 				v="$rcvwnd"
 			elif [ "$k" = "rcvwnd" ]; then
@@ -2052,7 +2070,7 @@ show_current_instance_info() {
 	local mobile_config="key=${key}"
 	gen_client_configs() {
 		local k; local v
-		for k in $*; do
+		for k in "$@"; do
 			if [ "$k" = "sndwnd" ]; then
 				v="$rcvwnd"
 			elif [ "$k" = "rcvwnd" ]; then
@@ -2278,7 +2296,8 @@ do_update() {
 	echo "开始获取 Kcptun 版本信息..."
 	get_kcptun_version_info
 
-	local cur_tag_name="$(get_installed_version)"
+	local cur_tag_name=
+	cur_tag_name="$(get_installed_version)"
 
 	if [ -n "$cur_tag_name" ] && is_number "$cur_tag_name" && [ ${#cur_tag_name} -eq 8 ]; then
 		cur_tag_name=v"$cur_tag_name"
@@ -2347,21 +2366,22 @@ instance_del() {
 	EOF
 	any_key_to_continue
 
-	local supervisor_config_file="$(get_current_file 'supervisor')"
+	supervisor_config_file="$(get_current_file 'supervisor')"
 	if [ ! -f "$supervisor_config_file" ]; then
 		echo "你选择的实例 kcptun${current_instance_id} 不存在!"
 		exit 1
 	fi
 
-	local current_config_file="$(get_current_file 'config')"
-	local current_log_file="$(get_current_file 'log')"
-	local current_snmp_log_file=""
+	current_config_file="$(get_current_file 'config')"
+	current_log_file="$(get_current_file 'log')"
+	current_snmp_log_file="$(get_current_file 'snmp')"
 
 	(
 		set -x
 		rm -f "$supervisor_config_file" \
 			"$current_config_file" \
-			"$current_log_file"
+			"$current_log_file" \
+			"$current_snmp_log_file"
 	)
 
 	start_supervisor
@@ -2418,7 +2438,8 @@ instance_log() {
 
 	echo "你选择了查看实例 kcptun${current_instance_id} 的日志, 正在读取..."
 
-	local log_file="$(get_current_file 'log')"
+	local log_file=
+	log_file="$(get_current_file 'log')"
 
 	if [ -f "$log_file" ]; then
 		cat >&2 <<-EOF
@@ -2476,7 +2497,8 @@ instance_reconfig() {
 	case "${sel:0:1}" in
 		2)
 			echo "正在打开配置文件, 请手动修改..."
-			local config_file="$(get_current_file 'config')"
+			local config_file=
+			config_file="$(get_current_file 'config')"
 			edit_config_file() {
 				if [ ! -f "$config_file" ]; then
 					return 1
@@ -2551,7 +2573,8 @@ manual_install() {
 			continue
 		fi
 
-		local version_num=$(echo "$tag_name" | grep -oE "[0-9]+" || "0")
+		local version_num=
+		version_num=$(echo "$tag_name" | grep -oE "[0-9]+" || "0")
 		if [ ${#version_num} -eq 8 ] && [ $version_num -le 20160826 ]; then
 			echo "不支持安装 v20160826 及以前版本"
 			tag_name=
@@ -2623,7 +2646,8 @@ is_installed() {
 
 # 检查是否已经安装
 installed_check() {
-	local instance_count="$(get_instance_count)"
+	local instance_count=
+	instance_count="$(get_instance_count)"
 	if is_installed && [ $instance_count -gt 0 ]; then
 		cat >&2 <<-EOF
 		检测到你已安装 Kcptun 服务端, 已配置的实例个数为 ${instance_count} 个
