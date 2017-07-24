@@ -594,6 +594,7 @@ enable_service() {
 	if command_exists systemctl; then
 		(
 			set -x
+			systemctl daemon-reload
 			systemctl enable "${SERVICE_NAME}.service"
 		)
 	elif command_exists service; then
