@@ -26,8 +26,8 @@ HAPROXY_LKL_BIN_URL="${BASE_URL}/bin/haproxy-lkl.sh"
 HAPROXY_LKL_SERVICE_FILE_DEBIAN_URL="${BASE_URL}/startup/haproxy-lkl.init.debain"
 HAPROXY_LKL_SERVICE_FILE_REDHAT_URL="${BASE_URL}/startup/haproxy-lkl.init.redhat"
 HAPROXY_LKL_SYSTEMD_FILE_URL="${BASE_URL}/startup/haproxy-lkl.systemd"
-LKL_LIB_URL="${BASE_URL}/lib64/liblkl-hijack.so-20170424"
-LKL_LIB_MD5='74508c6e98fc9d106a2ba9edcae47fb3'
+LKL_LIB_URL="${BASE_URL}/lib64/liblkl-hijack.so-20170724"
+LKL_LIB_MD5='b50fc6a7ccfc70c76f44506814e7e18b'
 
 # 需要 BBR 加速的端口
 ACCELERATE_PORT=
