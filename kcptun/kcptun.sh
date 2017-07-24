@@ -75,7 +75,7 @@ run_user='kcptun'
 
 clear
 
-cat >&2 <<-'EOF'
+cat >&1 <<-'EOF'
 #########################################################
 # Kcptun 服务端一键安装脚本                             #
 # 该脚本支持 Kcptun 服务端的安装、更新、卸载及配置      #
@@ -88,7 +88,7 @@ cat >&2 <<-'EOF'
 EOF
 
 usage() {
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 
 	请使用: $0 <option>
 
@@ -988,7 +988,7 @@ set_kcptun_config() {
 	[ -z "$listen_port" ] && listen_port="$D_LISTEN_PORT"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请输入 Kcptun 服务端运行端口 [1~65535]
 		这个端口就是 Kcptun 客户端连接的端口
 		EOF
@@ -1011,14 +1011,14 @@ set_kcptun_config() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	端口 = ${listen_port}
 	---------------------------
 	EOF
 
 	[ -z "$target_addr" ] && target_addr="$D_TARGET_ADDR"
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	请输入需要加速的地址
 	可以输入主机名称、IPv4 地址或者 IPv6 地址
 	EOF
@@ -1028,7 +1028,7 @@ set_kcptun_config() {
 	fi
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	加速地址 = ${target_addr}
 	---------------------------
@@ -1037,7 +1037,7 @@ set_kcptun_config() {
 	[ -z "$target_port" ] && target_port="$D_TARGET_PORT"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请输入需要加速的端口 [1~65535]
 		EOF
 		read -p "(默认: ${target_port}): " input
@@ -1073,14 +1073,14 @@ set_kcptun_config() {
 
 	input=
 	yn=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	加速端口 = ${target_port}
 	---------------------------
 	EOF
 
 	[ -z "$key" ] && key="$D_KEY"
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	请设置 Kcptun 密码(key)
 	该参数必须两端一致
 	EOF
@@ -1088,7 +1088,7 @@ set_kcptun_config() {
 	[ -n "$input" ] && key="$input"
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	密码 = ${key}
 	---------------------------
@@ -1099,7 +1099,7 @@ set_kcptun_config() {
 		"twofish" "cast5" "3des" "tea" "xtea" "xor" "none" )
 	local count="${#crypt_list[@]}"
 	local i=0
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	请选择加密方式(crypt)
 	强加密对 CPU 要求较高，
 	如果是在路由器上配置客户端，
@@ -1130,7 +1130,7 @@ set_kcptun_config() {
 	input=
 	i=0
 	count=0
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	-----------------------------
 	加密方式 = ${crypt}
 	-----------------------------
@@ -1140,7 +1140,7 @@ set_kcptun_config() {
 	local mode_list=( "normal" "fast" "fast2" "fast3" "manual" )
 	count=${#mode_list[@]}
 	i=0
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	请选择加速模式(mode)
 	加速模式和发送窗口大小共同决定了流量的损耗大小
 	如果加速模式选择“手动(manual)”，
@@ -1170,7 +1170,7 @@ set_kcptun_config() {
 	input=
 	count=0
 	i=0
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	加速模式 = ${mode}
 	---------------------------
@@ -1188,7 +1188,7 @@ set_kcptun_config() {
 	[ -z "$mtu" ] && mtu="$D_MTU"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置 UDP 数据包的 MTU (最大传输单元)值
 		EOF
 		read -p "(默认: ${mtu}): " input
@@ -1204,7 +1204,7 @@ set_kcptun_config() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	MTU = ${mtu}
 	---------------------------
@@ -1213,7 +1213,7 @@ set_kcptun_config() {
 	[ -z "$sndwnd" ] && sndwnd="$D_SNDWND"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置发送窗口大小(sndwnd)
 		发送窗口过大会浪费过多流量
 		EOF
@@ -1230,7 +1230,7 @@ set_kcptun_config() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	sndwnd = ${sndwnd}
 	---------------------------
@@ -1239,7 +1239,7 @@ set_kcptun_config() {
 	[ -z "$rcvwnd" ] && rcvwnd="$D_RCVWND"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置接收窗口大小(rcvwnd)
 		EOF
 		read -p "(数据包数量, 默认: ${rcvwnd}): " input
@@ -1255,7 +1255,7 @@ set_kcptun_config() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	rcvwnd = ${rcvwnd}
 	---------------------------
@@ -1264,7 +1264,7 @@ set_kcptun_config() {
 	[ -z "$datashard" ] && datashard="$D_DATASHARD"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置前向纠错 datashard
 		该参数必须两端一致
 		EOF
@@ -1281,7 +1281,7 @@ set_kcptun_config() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	datashard = ${datashard}
 	---------------------------
@@ -1290,7 +1290,7 @@ set_kcptun_config() {
 	[ -z "$parityshard" ] && parityshard="$D_PARITYSHARD"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置前向纠错 parityshard
 		该参数必须两端一致
 		EOF
@@ -1307,7 +1307,7 @@ set_kcptun_config() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	parityshard = ${parityshard}
 	---------------------------
@@ -1316,7 +1316,7 @@ set_kcptun_config() {
 	[ -z "$dscp" ] && dscp="$D_DSCP"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置差分服务代码点(DSCP)
 		EOF
 		read -p "(默认: ${dscp}): " input
@@ -1332,7 +1332,7 @@ set_kcptun_config() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	DSCP = ${dscp}
 	---------------------------
@@ -1341,7 +1341,7 @@ set_kcptun_config() {
 	[ -z "$nocomp" ] && nocomp="$D_NOCOMP"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		是否关闭数据压缩?
 		EOF
 		read -p "(默认: ${nocomp}) [y/n]: " yn
@@ -1363,7 +1363,7 @@ set_kcptun_config() {
 	done
 
 	yn=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	nocomp = ${nocomp}
 	---------------------------
@@ -1372,14 +1372,14 @@ set_kcptun_config() {
 	unset_snmp() {
 		snmplog=
 		snmpperiod=
-		cat >&2 <<-EOF
+		cat >&1 <<-EOF
 		---------------------------
 		不记录 SNMP 日志
 		---------------------------
 		EOF
 	}
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	是否记录 SNMP 日志?
 	EOF
 	read -p "(默认: 否) [y/n]: " yn
@@ -1400,7 +1400,7 @@ set_kcptun_config() {
 	[ -z "$pprof" ] && pprof="$D_PPROF"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		是否开启 pprof 性能监控?
 		地址: http://IP:6060/debug/pprof/
 		EOF
@@ -1423,7 +1423,7 @@ set_kcptun_config() {
 	done
 
 	yn=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	pprof = ${pprof}
 	---------------------------
@@ -1433,14 +1433,14 @@ set_kcptun_config() {
 		acknodelay=
 		sockbuf=
 		keepalive=
-		cat >&2 <<-EOF
+		cat >&1 <<-EOF
 		---------------------------
 		不配置隐藏参数
 		---------------------------
 		EOF
 	}
 
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	基础参数设置完成，是否设置额外的隐藏参数?
 	通常情况下保持默认即可，不用额外设置
 	EOF
@@ -1473,7 +1473,7 @@ set_snmp() {
 	[ -z "$snmpperiod" ] && snmpperiod="$D_SNMPPERIOD"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置 SNMP 记录间隔时间 snmpperiod
 		EOF
 		read -p "(默认: ${snmpperiod}): " input
@@ -1488,7 +1488,7 @@ set_snmp() {
 		break
 	done
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	snmplog = ${snmplog}
 	snmpperiod = ${snmpperiod}
@@ -1504,7 +1504,7 @@ set_manual_parameters() {
 	[ -z "$nodelay" ] && nodelay="$D_NODELAY"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		是否启用 nodelay 模式?
 		(0) 不启用
 		(1) 启用
@@ -1528,7 +1528,7 @@ set_manual_parameters() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	nodelay = ${nodelay}
 	---------------------------
@@ -1537,7 +1537,7 @@ set_manual_parameters() {
 	[ -z "$interval" ] && interval="$D_INTERVAL"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置协议内部工作的 interval
 		EOF
 		read -p "(单位: ms, 默认: ${interval}): " input
@@ -1553,7 +1553,7 @@ set_manual_parameters() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	interval = ${interval}
 	---------------------------
@@ -1562,7 +1562,7 @@ set_manual_parameters() {
 	[ -z "$resend" ] && resend="$D_RESEND"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		是否启用快速重传模式(resend)?
 		(0) 不启用
 		(1) 启用
@@ -1590,7 +1590,7 @@ set_manual_parameters() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	resend = ${resend}
 	---------------------------
@@ -1599,7 +1599,7 @@ set_manual_parameters() {
 	[ -z "$nc" ] && nc="$D_NC"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		是否关闭流控(nc)?
 		(0) 关闭
 		(1) 开启
@@ -1621,7 +1621,7 @@ set_manual_parameters() {
 		fi
 		break
 	done
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	nc = ${nc}
 	---------------------------
@@ -1636,7 +1636,7 @@ set_hidden_parameters() {
 	[ -z "$acknodelay" ] && acknodelay="$D_ACKNODELAY"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		是否启用 acknodelay 模式?
 		EOF
 		read -p "(默认: ${acknodelay}) [y/n]: " yn
@@ -1658,7 +1658,7 @@ set_hidden_parameters() {
 	done
 
 	yn=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	acknodelay = ${acknodelay}
 	---------------------------
@@ -1667,7 +1667,7 @@ set_hidden_parameters() {
 	[ -z "$sockbuf" ] && sockbuf="$D_SOCKBUF"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置 UDP 收发缓冲区大小(sockbuf)
 		EOF
 		read -p "(单位: MB, 默认: $(expr ${sockbuf} / 1024 / 1024)): " input
@@ -1683,7 +1683,7 @@ set_hidden_parameters() {
 	done
 
 	input=
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	sockbuf = ${sockbuf}
 	---------------------------
@@ -1692,7 +1692,7 @@ set_hidden_parameters() {
 	[ -z "$keepalive" ] && keepalive="$D_KEEPALIVE"
 	while :
 	do
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		请设置 Keepalive 的间隔时间
 		EOF
 		read -p "(单位: s, 默认值: ${keepalive}, 前值: 5): " input
@@ -1707,7 +1707,7 @@ set_hidden_parameters() {
 		break
 	done
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	---------------------------
 	keepalive = ${keepalive}
 	---------------------------
@@ -1831,7 +1831,7 @@ set_firewall() {
 				firewall-cmd --reload
 			fi
 		else
-			cat >&2 <<-EOF
+			cat >&1 <<-EOF
 			警告: 自动添加 firewalld 规则失败
 			如果有必要, 请手动添加端口 ${listen_port} 的防火墙规则:
 			    firewall-cmd --permanent --zone=public --add-port=${listen_port}/udp
@@ -1854,7 +1854,7 @@ set_firewall() {
 				service iptables restart
 			fi
 		else
-			cat >&2 <<-EOF
+			cat >&1 <<-EOF
 			警告: 自动添加 iptables 规则失败
 			如有必要, 请手动添加端口 ${listen_port} 的防火墙规则:
 			    iptables -I INPUT -p udp --dport ${listen_port} -j ACCEPT
@@ -1868,7 +1868,7 @@ set_firewall() {
 # 选择一个实例
 select_instance() {
 	if [ "$(get_instance_count)" -gt 1 ]; then
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		当前有多个 Kcptun 实例 (按最后修改时间排序):
 		EOF
 
@@ -1990,14 +1990,14 @@ show_version_and_client_url() {
 	local version=
 	version="$(get_installed_version)"
 	if [ -n "$version" ]; then
-		cat >&2 <<-EOF
+		cat >&1 <<-EOF
 
 		当前安装的 Kcptun 版本为: ${version}
 		EOF
 	fi
 
 	if [ -n "$kcptun_release_html_url" ]; then
-		cat >&2 <<-EOF
+		cat >&1 <<-EOF
 		请自行前往:
 		  ${kcptun_release_html_url}
 		手动下载客户端文件
@@ -2064,7 +2064,7 @@ show_current_instance_info() {
 		"parityshard" "dscp" "nocomp" "nodelay" "interval" "resend" \
 		"nc" "acknodelay" "sockbuf" "keepalive"
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 
 	可使用的客户端配置文件为:
 	${client_config}
@@ -2098,7 +2098,7 @@ show_current_instance_info() {
 		"parityshard" "dscp" "nocomp" "nodelay" "interval" "resend" \
 		"nc" "acknodelay" "sockbuf" "keepalive"
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 
 	手机端参数可以使用:
 	  ${mobile_config}
@@ -2119,14 +2119,14 @@ do_install() {
 	start_supervisor
 	enable_supervisor
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 
 	恭喜! Kcptun 服务端安装成功。
 	EOF
 
 	show_current_instance_info
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	Kcptun 安装目录: ${KCPTUN_INSTALL_DIR}
 
 	已将 Supervisor 加入开机自启,
@@ -2143,7 +2143,7 @@ do_install() {
 
 do_uninstall() {
 	check_root
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	你选择了卸载 Kcptun 服务端
 	EOF
 	any_key_to_continue
@@ -2166,7 +2166,7 @@ do_uninstall() {
 		rm -rf "$KCPTUN_LOG_DIR"
 	)
 
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	是否同时卸载 Supervisor ?
 	注意: Supervisor 的配置文件将同时被删除
 	EOF
@@ -2221,7 +2221,7 @@ do_uninstall() {
 		esac
 	fi
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	卸载完成, 欢迎再次使用。
 	注意: 脚本没有自动卸载 python-setuptools (包含 easy_install)
 	如有需要, 你可以自行卸载。
@@ -2231,7 +2231,7 @@ do_uninstall() {
 do_update() {
 	pre_ckeck
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	你选择了检查更新, 正在开始操作...
 	EOF
 
@@ -2239,7 +2239,7 @@ do_update() {
 		local shell_path=$0
 
 		if [ $new_shell_version -gt $SHELL_VERSION ]; then
-			cat >&2 <<-EOF
+			cat >&1 <<-EOF
 			发现一键安装脚本更新, 版本号: ${new_shell_version}
 			更新说明:
 			$(printf "${shell_change_log}\n")
@@ -2256,7 +2256,7 @@ do_update() {
 			rm -f "$shell_path".bak
 
 			clear
-			cat >&2 <<-EOF
+			cat >&1 <<-EOF
 			安装脚本已更新到 v${new_shell_version}, 正在运行新的脚本...
 			EOF
 
@@ -2265,7 +2265,7 @@ do_update() {
 		fi
 
 		if [ $new_config_version -gt $CONFIG_VERSION ]; then
-			cat >&2 <<-EOF
+			cat >&1 <<-EOF
 			发现 Kcptun 配置更新, 版本号: v${new_config_version}
 			更新说明:
 			$(printf "${config_change_log}\n")
@@ -2280,7 +2280,7 @@ do_update() {
 		fi
 
 		if [ $new_init_version -gt $INIT_VERSION ]; then
-			cat >&2 <<-EOF
+			cat >&1 <<-EOF
 			发现服务启动脚本文件更新, 版本号: v${new_init_version}
 			更新说明:
 			$(printf "${init_change_log}\n")
@@ -2307,7 +2307,7 @@ do_update() {
 	fi
 
 	if [ -n "$kcptun_release_tag_name" ] && [ "$kcptun_release_tag_name" != "$cur_tag_name" ]; then
-		cat >&2 <<-EOF
+		cat >&1 <<-EOF
 		发现 Kcptun 新版本 ${kcptun_release_tag_name}
 		$([ "$kcptun_release_prerelease" = "true" ] && printf "\033[41;37m 注意: 该版本为预览版, 请谨慎更新 \033[0m")
 		更新说明:
@@ -2320,7 +2320,7 @@ do_update() {
 
 		show_version_and_client_url
 	else
-		cat >&2 <<-'EOF'
+		cat >&1 <<-'EOF'
 		未发现 Kcptun 更新...
 		EOF
 	fi
@@ -2329,7 +2329,7 @@ do_update() {
 instance_add() {
 	pre_ckeck
 
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	你选择了添加实例, 正在开始操作...
 	EOF
 	current_instance_id="$(get_new_instance_id)"
@@ -2339,7 +2339,7 @@ instance_add() {
 	set_firewall
 	start_supervisor
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	恭喜, 实例 kcptun${current_instance_id} 添加成功!
 	EOF
 	show_current_instance_info
@@ -2363,7 +2363,7 @@ instance_del() {
 		fi
 	fi
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	你选择了删除实例 kcptun${current_instance_id}
 	注意: 实例删除后无法恢复
 	EOF
@@ -2389,7 +2389,7 @@ instance_del() {
 
 	start_supervisor
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	实例 kcptun${current_instance_id} 删除成功!
 	EOF
 }
@@ -2445,7 +2445,7 @@ instance_log() {
 	log_file="$(get_current_file 'log')"
 
 	if [ -f "$log_file" ]; then
-		cat >&2 <<-EOF
+		cat >&1 <<-EOF
 		实例 kcptun${current_instance_id} 的日志信息如下:
 		注: 日志实时刷新, 按 Ctrl+C 退出日志查看
 		EOF
@@ -2476,7 +2476,7 @@ instance_reconfig() {
 		fi
 	fi
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 	你选择了重新配置实例 kcptun${current_instance_id}, 正在开始操作...
 	EOF
 
@@ -2488,7 +2488,7 @@ instance_reconfig() {
 	fi
 
 	local sel=
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	请选择操作:
 	(1) 重新配置实例所有选项
 	(2) 直接修改实例配置文件
@@ -2540,7 +2540,7 @@ instance_reconfig() {
 		start_supervisor
 	fi
 
-	cat >&2 <<-EOF
+	cat >&1 <<-EOF
 
 	恭喜, Kcptun 服务端配置已更新!
 	EOF
@@ -2551,7 +2551,7 @@ instance_reconfig() {
 manual_install() {
 	pre_ckeck
 
-	cat >&2 <<-'EOF'
+	cat >&1 <<-'EOF'
 	你选择了自定义版本安装, 正在开始操作...
 	EOF
 
@@ -2560,7 +2560,7 @@ manual_install() {
 	while :
 	do
 		if [ -z "$tag_name" ]; then
-			cat >&2 <<-'EOF'
+			cat >&1 <<-'EOF'
 			请输入你想安装的 Kcptun 版本的完整 TAG
 			EOF
 			read -p "(例如: v20160904): " tag_name
@@ -2596,7 +2596,7 @@ manual_install() {
 			tag_name=
 			continue
 		else
-			cat >&2 <<-EOF
+			cat >&1 <<-EOF
 			已找到 Kcptun 版本信息, TAG: ${tag_name}
 			EOF
 			any_key_to_continue
@@ -2625,7 +2625,7 @@ pre_ckeck() {
 
 is_installed() {
 	if [ -d '/usr/share/kcptun' ]; then
-		cat >&2 <<-EOF
+		cat >&1 <<-EOF
 		检测发现你由旧版升级到了新版
 		新版中将默认安装目录设置为了 ${KCPTUN_INSTALL_DIR}
 		脚本会自动将文件从旧版目录 /usr/share/kcptun
@@ -2652,12 +2652,12 @@ installed_check() {
 	local instance_count=
 	instance_count="$(get_instance_count)"
 	if is_installed && [ $instance_count -gt 0 ]; then
-		cat >&2 <<-EOF
+		cat >&1 <<-EOF
 		检测到你已安装 Kcptun 服务端, 已配置的实例个数为 ${instance_count} 个
 		EOF
 		while :
 		do
-			cat >&2 <<-'EOF'
+			cat >&1 <<-'EOF'
 			请选择你希望的操作:
 			(1) 覆盖安装
 			(2) 重新配置
