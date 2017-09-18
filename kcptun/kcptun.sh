@@ -1095,9 +1095,7 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$crypt" ] && crypt="$D_CRYPT"
-	local crypt_list=( "aes" "aes-128" "aes-192" "salsa20" "blowfish" \
-		"twofish" "cast5" "3des" "tea" "xtea" "xor" "none" )
-	local count="${#crypt_list[@]}"
+	local crypt_list="aes aes-128 aes-192 salsa20 blowfish twofish cast5 3des tea xtea xor none"
 	local i=0
 	cat >&1 <<-'EOF'
 	请选择加密方式(crypt)
@@ -1109,15 +1107,15 @@ set_kcptun_config() {
 	while :
 	do
 
-		while [ $i -lt $count ]; do
-			echo "($(expr $i + 1)) ${crypt_list[$i]}"
+		for c in $crypt_list; do
 			i=$(expr $i + 1)
+			echo "(${i}) ${c}"
 		done
 
 		read -p "(默认: ${crypt}) 请选择 [1~$i]: " input
 		if [ -n "$input" ]; then
 			if is_number "$input" && [ $input -ge 1 ] && [ $input -le $i ]; then
-				crypt=${crypt_list[$(expr $input - 1)]}
+				crypt=$(echo "$crypt_list" | cut -d' ' -f ${input})
 			else
 				echo "请输入有效数字 1~$i!"
 				i=0
@@ -1129,7 +1127,6 @@ set_kcptun_config() {
 
 	input=
 	i=0
-	count=0
 	cat >&1 <<-EOF
 	-----------------------------
 	加密方式 = ${crypt}
@@ -1137,8 +1134,7 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$mode" ] && mode="$D_MODE"
-	local mode_list=( "normal" "fast" "fast2" "fast3" "manual" )
-	count=${#mode_list[@]}
+	local mode_list="normal fast fast2 fast3 manual"
 	i=0
 	cat >&1 <<-'EOF'
 	请选择加速模式(mode)
@@ -1149,15 +1145,15 @@ set_kcptun_config() {
 	while :
 	do
 
-		while [ $i -lt $count ]; do
-			echo "($(expr $i + 1)) ${mode_list[$i]}"
+		for m in $mode_list; do
 			i=$(expr $i + 1)
+			echo "(${i}) ${m}"
 		done
 
 		read -p "(默认: ${mode}) 请选择 [1~$i]: " input
 		if [ -n "$input" ]; then
 			if is_number "$input" && [ $input -ge 1 ] && [ $input -le $i ]; then
-				mode=${mode_list[$(expr $input - 1)]}
+				mode=$(echo "$mode_list" | cut -d ' ' -f ${input})
 			else
 				echo "请输入有效数字 1~$i!"
 				i=0
@@ -1168,7 +1164,6 @@ set_kcptun_config() {
 	done
 
 	input=
-	count=0
 	i=0
 	cat >&1 <<-EOF
 	---------------------------
@@ -1875,10 +1870,18 @@ select_instance() {
 		local files=
 		files=$(ls -lt '/etc/supervisor/conf.d/' | grep "^-" | awk '{print $9}' | grep "^kcptun[0-9]*\.conf$")
 		local i=0
-		local array=()
+		local array=""
+		local id=""
 		for file in $files; do
+			id="$(echo "$file" | grep -oE "[0-9]+")"
+
+			if [ -z "$array" ]; then
+				array="$id"
+			else
+				array="${array} ${id}"
+			fi
+
 			i=$(expr $i + 1)
-			array[$i]="$(echo "$file" | grep -oE "[0-9]+")"
 			echo "(${i}) ${file%.*}"
 		done
 
@@ -1900,7 +1903,7 @@ select_instance() {
 				continue
 			fi
 
-			current_instance_id=${array[$sel]}
+			current_instance_id=$(echo "$array" | cut -d ' ' -f ${sel})
 			break
 		done
 	fi
