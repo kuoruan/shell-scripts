@@ -1874,12 +1874,7 @@ select_instance() {
 		local id=""
 		for file in $files; do
 			id="$(echo "$file" | grep -oE "[0-9]+")"
-
-			if [ -z "$array" ]; then
-				array="$id"
-			else
-				array="${array} ${id}"
-			fi
+			array="${array}${id}#"
 
 			i=$(expr $i + 1)
 			echo "(${i}) ${file%.*}"
@@ -1903,7 +1898,7 @@ select_instance() {
 				continue
 			fi
 
-			current_instance_id=$(echo "$array" | cut -d ' ' -f ${sel})
+			current_instance_id=$(echo "$array" | cut -d '#' -f ${sel})
 			break
 		done
 	fi
