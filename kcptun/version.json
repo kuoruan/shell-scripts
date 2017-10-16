@@ -1,7 +1,7 @@
 {
-	"shell_version": 19,
+	"shell_version": 20,
 	"shell_url": "https://github.com/kuoruan/shell-scripts/raw/master/kcptun/kcptun.sh",
-	"change_log": "1.修复当 key 含有空格时，加载出错的问题;\n2.修复某些vps无法正确获取 easy_install 版本信息的问题",
+	"change_log": "1.将常规信息输出到 stdout，将错误信息输出到 stderr;\n2.修复某些情况下无法获取到正确实例 ID 的问题;\n3.由于 Kcptun 支持多客户端同时连接一个服务端端口，故修改提示信息 “多用户” => “多端口”",
 	"config_version": 6,
 	"config_change_log": "1.支持 snmp 和 pprof 参数;\n2.输出新版手机端参数",
 	"init_version": 3,
