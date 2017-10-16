@@ -17,7 +17,7 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # 版本信息，请勿修改
 # =================
-SHELL_VERSION=19
+SHELL_VERSION=20
 CONFIG_VERSION=6
 INIT_VERSION=3
 # =================
@@ -99,7 +99,7 @@ usage() {
 	    update           检查更新
 	    manual           自定义 Kcptun 版本安装
 	    help             查看脚本使用说明
-	    add              添加一个实例, 多用户使用
+	    add              添加一个实例, 多端口加速
 	    reconfig <id>    重新配置实例
 	    show <id>        显示实例详细配置
 	    log <id>         显示实例日志
@@ -2659,7 +2659,7 @@ installed_check() {
 			请选择你希望的操作:
 			(1) 覆盖安装
 			(2) 重新配置
-			(3) 添加实例(多用户)
+			(3) 添加实例(多端口)
 			(4) 检查更新
 			(5) 查看配置
 			(6) 查看日志输出
