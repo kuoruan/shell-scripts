@@ -785,14 +785,14 @@ install_supervisor() {
 
 	(
 		set -x
-		easy_install -U supervisor
+		easy_install -i https://pypi.python.org/simple/ -U supervisor
 	)
 
 	if [ "$?" != "0" ]; then
 		cat >&2 <<-EOF
 		错误: 安装 Supervisor 失败，
 		请尝试使用
-		  easy_install -U supervisor
+		  easy_install -i https://pypi.python.org/simple/ -U supervisor
 		来手动安装。
 		EOF
 
