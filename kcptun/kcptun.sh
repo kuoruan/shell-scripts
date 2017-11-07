@@ -56,6 +56,7 @@ D_DATASHARD=10
 D_PARITYSHARD=3
 D_DSCP=0
 D_NOCOMP='false'
+D_QUIET='false'
 D_SNMPPERIOD=60
 D_PPROF='false'
 
@@ -1364,6 +1365,37 @@ set_kcptun_config() {
 	---------------------------
 	EOF
 
+	[ -z "$quiet" ] && quiet="$D_QUIET"
+	while :
+	do
+		cat >&1 <<-'EOF'
+		是否屏蔽 open/close 日志输出?
+		EOF
+		read -p "(默认: ${quiet}) [y/n]: " yn
+		if [ -n "$yn" ]; then
+			case "${yn:0:1}" in
+				y|Y)
+					quiet='true'
+					;;
+				n|N)
+					quiet='false'
+					;;
+				*)
+					echo "输入有误，请重新输入!"
+					continue
+					;;
+			esac
+		fi
+		break
+	done
+
+	yn=
+	cat >&1 <<-EOF
+	---------------------------
+	quiet = ${quiet}
+	---------------------------
+	EOF
+
 	unset_snmp() {
 		snmplog=
 		snmpperiod=
@@ -1787,7 +1819,7 @@ gen_kcptun_config() {
 		fi
 	}
 
-	write_configs_to_file "snmplog" "snmpperiod" "pprof" "acknodelay" "nodelay" \
+	write_configs_to_file "quiet" "snmplog" "snmpperiod" "pprof" "acknodelay" "nodelay" \
 		"interval" "resend" "nc" "sockbuf" "keepalive"
 
 	if ! grep -q "^${run_user}:" '/etc/passwd'; then
@@ -2022,7 +2054,7 @@ show_current_instance_info() {
 	}
 
 	show_configs "key" "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
-		"parityshard" "dscp" "nocomp" "nodelay" "interval" "resend" \
+		"parityshard" "dscp" "nocomp" "quiet" "nodelay" "interval" "resend" \
 		"nc" "acknodelay" "sockbuf" "keepalive"
 
 	show_version_and_client_url
@@ -2059,7 +2091,7 @@ show_current_instance_info() {
 	}
 
 	gen_client_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
-		"parityshard" "dscp" "nocomp" "nodelay" "interval" "resend" \
+		"parityshard" "dscp" "nocomp" "quiet" "nodelay" "interval" "resend" \
 		"nc" "acknodelay" "sockbuf" "keepalive"
 
 	cat >&1 <<-EOF
@@ -2093,7 +2125,7 @@ show_current_instance_info() {
 	}
 
 	gen_client_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
-		"parityshard" "dscp" "nocomp" "nodelay" "interval" "resend" \
+		"parityshard" "dscp" "nocomp" "quiet" "nodelay" "interval" "resend" \
 		"nc" "acknodelay" "sockbuf" "keepalive"
 
 	cat >&1 <<-EOF
