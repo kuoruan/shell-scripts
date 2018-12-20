@@ -189,7 +189,7 @@ generate_config() {
 	    timeout client 30s
 	    timeout server 30s
 	backend local
-	    server srv 10.0.0.1 send-proxy
+	    server srv 10.0.0.1
 	EOF
 
 	local legal_rules=
