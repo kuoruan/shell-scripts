@@ -2063,8 +2063,8 @@ show_current_instance_info() {
 	local client_config=
 	read -d '' client_config <<-EOF
 	{
-	  "localaddr": ":${target_port}",
-	  "remoteaddr": "${server_ip}:${listen_port}",
+	  "localaddr": ":${listen_port}",
+	  "remoteaddr": "${server_ip}:${target_port}",
 	  "key": "${key}"
 	}
 	EOF
