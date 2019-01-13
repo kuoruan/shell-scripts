@@ -885,12 +885,18 @@ download_startup_file() {
 	local supervisor_startup_file_url=""
 
 	if command_exists systemctl; then
-		supervisor_startup_file='/lib/systemd/system/supervisord.service'
+		supervisor_startup_file="/etc/systemd/system/supervisord.service"
 		supervisor_startup_file_url="$SUPERVISOR_SYSTEMD_FILE_URL"
 
 		download_file "$supervisor_startup_file_url" "$supervisor_startup_file"
 		(
 			set -x
+			# 删除旧版 service 文件
+
+			local old_service_file="/lib/systemd/system/supervisord.service"
+			if [ -f "$old_service_file" ]; then
+				rm -f "$old_service_file"
+			fi
 			systemctl daemon-reload >/dev/null 2>&1
 		)
 	elif command_exists service; then
@@ -2240,7 +2246,8 @@ do_uninstall() {
 			y|Y)
 				if command_exists systemctl; then
 					systemctl disable supervisord.service
-					rm -f '/lib/systemd/system/supervisord.service'
+					rm -f "/lib/systemd/system/supervisord.service" \
+						"/etc/systemd/system/supervisord.service"
 				elif command_exists service; then
 					if [ -z "$lsb_dist" ]; then
 						get_os_info
