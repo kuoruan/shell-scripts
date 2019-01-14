@@ -765,7 +765,7 @@ install_deps() {
 					( set -x; sleep 3; yum -y -q install python-pip || true )
 				fi
 
-				# 如果 python-pip 安装失败，监测是否存在 python 环境
+				# 如果 python-pip 安装失败，检测是否已安装 python 环境
 				if ! command_exists python; then
 					( set -x; sleep 3; yum -y -q install python )
 				fi
@@ -831,7 +831,7 @@ install_supervisor() {
 
 		2. 对于 Redhat 系的 Linux 系统，可以尝试使用：
 		  sudo yum install -y python-pip 来进行安装
-			* 注：如果提示未找到该软件，请先使用以下命令来安装扩展软件仓库：
+		  * 注：如果提示未找到该软件，请先使用以下命令来安装扩展软件仓库：
 		    sudo yum install -y epel-release
 
 		3. 如果以上方法都失败了，请使用以下命令来手动安装：
