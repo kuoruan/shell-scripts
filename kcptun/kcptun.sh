@@ -173,8 +173,9 @@ get_server_ip() {
 		grep -vE "^192\.168|^172\.1[6-9]\.|^172\.2[0-9]\.|^172\.3[0-2]\.|^10\.|^127\.|^255\.|^0\." | \
 		head -n 1)
 
+	# 自动获取失败时，通过网站提供的 API 获取外网地址
 	if [ -z "$server_ip" ]; then
-		 server_ip="$(wget -qO- ipv4.icanhazip.com)"
+		 server_ip="$(wget -qO- --no-check-certificate https://ipv4.icanhazip.com)"
 	fi
 
 	echo "$server_ip"
@@ -695,7 +696,12 @@ install_deps() {
 
 			if ! command_exists pip; then
 				apt_get_update
-				( set -x; sleep 3; apt-get install -y -q python-pip )
+				( set -x; sleep 3; apt-get install -y -q python-pip || true )
+			fi
+
+			if ! command_exists python; then
+				apt_get_update
+				( set -x; sleep 3; apt-get install -y -q python )
 			fi
 			;;
 		fedora|centos|redhat|oraclelinux|photon)
@@ -713,7 +719,11 @@ install_deps() {
 				fi
 
 				if ! command_exists pip; then
-					( set -x; sleep 3; dnf -y -q install python-pip )
+					( set -x; sleep 3; dnf -y -q install python-pip || true )
+				fi
+
+				if ! command_exists python; then
+					( set -x; sleep 3; dnf -y -q install python )
 				fi
 			elif [ "$lsb_dist" = "photon" ]; then
 				if ! command_exists wget; then
@@ -729,7 +739,11 @@ install_deps() {
 				fi
 
 				if ! command_exists pip; then
-					( set -x; sleep 3; tdnf -y install python-pip )
+					( set -x; sleep 3; tdnf -y install python-pip || true )
+				fi
+
+				if ! command_exists python; then
+					( set -x; sleep 3; tdnf -y install python )
 				fi
 			else
 				if ! command_exists wget; then
@@ -744,8 +758,16 @@ install_deps() {
 					( set -x; sleep 3; yum -y -q install tar )
 				fi
 
+				# CentOS 等红帽系操作系统的软件库中可能不包括 python-pip
+				# 通常需要先安装 epel-release 扩展库
+				# 先在这里尝试安装 python-pip
 				if ! command_exists pip; then
-					( set -x; sleep 3; yum -y -q install python-pip )
+					( set -x; sleep 3; yum -y -q install python-pip || true )
+				fi
+
+				# 如果 python-pip 安装失败，监测是否存在 python 环境
+				if ! command_exists python; then
+					( set -x; sleep 3; yum -y -q install python )
 				fi
 			fi
 			;;
@@ -758,18 +780,20 @@ install_deps() {
 			;;
 	esac
 
+	# 这里判断了是否存在安装失败的软件包，但是默认不处理 python-pip 的安装失败，
+	# 接下来会统一检测并再次安装 pip 命令
 	if [ "$?" != 0 ]; then
 		cat >&2 <<-'EOF'
 		一些依赖软件安装失败，
 		请查看日志检查错误。
 		EOF
-
 		exit 1
 	fi
 
 	install_jq
 }
 
+# 安装 supervisor
 install_supervisor() {
 	if [ -s /etc/supervisord.conf ] && command_exists supervisord; then
 		cat >&2 <<-EOF
@@ -786,12 +810,34 @@ install_supervisor() {
 	fi
 
 	if ! command_exists pip; then
-		cat >&2 <<-EOF
-		未找到已安装的 pip 命令，
-		本脚本自 v21 版开始使用 pip 安装 Supervisior。
+		# 如果没有监测到 pip 命令，但当前服务器已经安装 python
+		# 使用 get-pip.py 脚本来安装 pip 命令
+		if command_exists python; then
+			(
+				set -x
+				wget -qO- --no-check-certificate https://bootstrap.pypa.io/get-pip.py | python
+			)
+		fi
+	fi
 
-		请先手动安装 python-pip
-		然后重新运行安装脚本。
+	# 如果使用脚本安装依然失败，提示手动安装
+	if ! command_exists pip; then
+		cat >&2 <<-EOF
+		未找到已安装的 pip 命令，请先手动安装 python-pip
+		本脚本自 v21 版开始使用 pip 来安装 Supervisior。
+
+		1. 对于 Debian 系的 Linux 系统，可以尝试使用：
+		  sudo apt-get install -y python-pip 来进行安装
+
+		2. 对于 Redhat 系的 Linux 系统，可以尝试使用：
+		  sudo yum install -y python-pip 来进行安装
+			* 注：如果提示未找到该软件，请先使用以下命令来安装扩展软件仓库：
+		    sudo yum install -y epel-release
+
+		3. 如果以上方法都失败了，请使用以下命令来手动安装：
+		  wget -qO- --no-check-certificate https://bootstrap.pypa.io/get-pip.py | python
+
+		pip 安装完毕之后，请重新运行安装脚本。
 		EOF
 		exit 1
 	fi
@@ -799,8 +845,7 @@ install_supervisor() {
 	if ! ( pip --version >/dev/null 2>&1 ); then
 		cat >&2 <<-EOF
 		检测到当前环境的 pip 命令已损坏，
-		通常是由于你自己升级过 python 版本，
-		但是没有将 pip 链接到新的地址。
+		请检查你的 python 环境。
 		EOF
 		exit 1
 	fi
@@ -2210,6 +2255,7 @@ do_install() {
 	EOF
 }
 
+# 卸载操作
 do_uninstall() {
 	check_root
 	cat >&1 <<-'EOF'
@@ -2306,6 +2352,7 @@ do_uninstall() {
 	EOF
 }
 
+# 更新
 do_update() {
 	pre_ckeck
 
@@ -2374,7 +2421,7 @@ do_update() {
 
 	# 如果是通过 pip 安装的
 	if ( pip list --format columns 2>/dev/null | grep -q "supervisor" ); then
-		pip install --upgrade supervisor >/dev/null 2>&1
+		pip install --upgrade pip supervisor >/dev/null 2>&1
 	else
 		easy_install -U supervisor >/dev/null 2>&1
 	fi
