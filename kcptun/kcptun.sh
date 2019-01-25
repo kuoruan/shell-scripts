@@ -810,20 +810,64 @@ install_supervisor() {
 	fi
 
 	if ! command_exists pip; then
-		# 如果没有监测到 pip 命令，但当前服务器已经安装 python
+				# 如果没有监测到 pip 命令，但当前服务器已经安装 python
 		# 使用 get-pip.py 脚本来安装 pip 命令
 		if command_exists python; then
-			(
-				set -x
-				wget -qO- --no-check-certificate https://bootstrap.pypa.io/get-pip.py | python
-			)
+			local python_version="$(python -V 2>&1)"
+
+			if [ "$?" != "0" ]; then
+				cat >&2 <<-EOF
+				python 环境已损坏，或无法通过 python -V 来获取版本号。
+				EOF
+
+				exit 1
+			fi
+
+			local version_string="$(echo "$python_version" | cut -d' ' -f2 | head -n1)"
+			local major_version="$(echo "$version_string" | cut -d'.' -f1)"
+			local minor_version="$(echo "$version_string" | cut -d'.' -f2)"
+
+			if [ -z "$major_version" ] || [ -z "$minor_version" ] || \
+				! ( is_number "$major_version" ); then
+				cat >&2 <<-EOF
+				获取 python 版本号失败：${python_version}
+				EOF
+				exit 1
+			fi
+
+			if [ "$major_version" -lt "2" ]; then
+				cat >&2 <<-EOF
+				不支持的 python 版本 ${version_string}，当前仅支持 python 2.6 及以上版本的安装。
+				EOF
+				exit 1
+			fi
+
+			local is_python_26="false"
+
+			if [ "$major_version" = "2" ] && [ "$minor_version" = "6" ]; then
+				is_python_26="true"
+
+				cat >&1 <<-EOF
+				注意：当前服务器的 python 版本为 ${version_string},
+				脚本对 python 2.6 及以下版本的支持可能会失效，
+				请尽快升级 python 版本到 >= 2.7.9 或 >= 3.4。
+				EOF
+
+				any_key_to_continue
+			fi
+
+			if [ "$is_python_26" = "true" ]; then
+				(
+					set -x
+					wget -qO- --no-check-certificate https://bootstrap.pypa.io/2.6/get-pip.py | python
+				)
+			else
+				(
+					set -x
+					wget -qO- --no-check-certificate https://bootstrap.pypa.io/get-pip.py | python
+				)
+			fi
 		fi
-	else
-		# 已安装 pip 时先尝试更新一下
-		(
-			set -x
-			python -m pip install --upgrade pip
-		)
 	fi
 
 	# 如果使用脚本安装依然失败，提示手动安装
@@ -838,10 +882,13 @@ install_supervisor() {
 		2. 对于 Redhat 系的 Linux 系统，可以尝试使用：
 		  sudo yum install -y python-pip 来进行安装
 		  * 注：如果提示未找到该软件，请先使用以下命令来安装扩展软件仓库：
-		    sudo yum install -y epel-release
+		      sudo yum install -y epel-release
+		    然后再次安装 python-pip
 
 		3. 如果以上方法都失败了，请使用以下命令来手动安装：
 		  wget -qO- --no-check-certificate https://bootstrap.pypa.io/get-pip.py | python
+		  * python 2.6 的用户请使用：
+		    wget -qO- --no-check-certificate https://bootstrap.pypa.io/2.6/get-pip.py | python
 
 		pip 安装完毕之后，请重新运行安装脚本。
 		EOF
@@ -854,6 +901,12 @@ install_supervisor() {
 		请检查你的 python 环境。
 		EOF
 		exit 1
+	else
+		# 已安装 pip 时先尝试更新一下
+		(
+			set -x
+			pip install --upgrade pip || true
+		)
 	fi
 
 	(
