@@ -1,7 +1,7 @@
 {
-	"shell_version": 21,
+	"shell_version": 22,
 	"shell_url": "https://github.com/kuoruan/shell-scripts/raw/master/kcptun/kcptun.sh",
-	"change_log": "1. 由于新版 python-setuptools 移除了 easy_install，故使用 pip 替换 easy_install；\n2. 将 Supervisor 的 systemd service 文件从 /lib 移动到了 /etc。",
+	"change_log": "1. 修复 python 2.6 下 pip 安装失败的问题。",
 	"config_version": 6,
 	"config_change_log": "1.支持 snmp 和 pprof 参数;\n2.输出新版手机端参数",
 	"init_version": 3,

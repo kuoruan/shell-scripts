@@ -17,7 +17,7 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # 版本信息，请勿修改
 # =================
-SHELL_VERSION=21
+SHELL_VERSION=22
 CONFIG_VERSION=6
 INIT_VERSION=3
 # =================
@@ -810,7 +810,7 @@ install_supervisor() {
 	fi
 
 	if ! command_exists pip; then
-				# 如果没有监测到 pip 命令，但当前服务器已经安装 python
+		# 如果没有监测到 pip 命令，但当前服务器已经安装 python
 		# 使用 get-pip.py 脚本来安装 pip 命令
 		if command_exists python; then
 			local python_version="$(python -V 2>&1)"
