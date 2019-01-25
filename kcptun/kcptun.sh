@@ -818,6 +818,12 @@ install_supervisor() {
 				wget -qO- --no-check-certificate https://bootstrap.pypa.io/get-pip.py | python
 			)
 		fi
+	else
+		# 已安装 pip 时先尝试更新一下
+		(
+			set -x
+			python -m pip install --upgrade pip
+		)
 	fi
 
 	# 如果使用脚本安装依然失败，提示手动安装
