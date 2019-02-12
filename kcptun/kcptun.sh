@@ -31,10 +31,11 @@ KCPTUN_TAGS_URL='https://github.com/xtaci/kcptun/tags'
 BASE_URL='https://github.com/kuoruan/shell-scripts/raw/master/kcptun'
 SHELL_VERSION_INFO_URL="${BASE_URL}/version.json"
 
-JQ_LINUX32_URL="${BASE_URL}/bin/jq-linux32"
-JQ_LINUX64_URL="${BASE_URL}/bin/jq-linux64"
-JQ_LINUX32_HASH='319af6123aaccb174f768a1a89fb586d471e891ba217fe518f81ef05af51edd9'
-JQ_LINUX64_HASH='af986793a515d500ab2d35f8d2aecd656e764504b789b66d7e1a0b727a124c44'
+JQ_DOWNLOAD_URL="https://github.com/stedolan/jq/releases/download/jq-1.5/"
+JQ_LINUX32_URL="${JQ_DOWNLOAD_URL}/jq-linux32"
+JQ_LINUX64_URL="${JQ_DOWNLOAD_URL}/jq-linux64"
+JQ_LINUX32_HASH='ab440affb9e3f546cf0d794c0058543eeac920b0cd5dff660a2948b970beb632'
+JQ_LINUX64_HASH='c6b3a7d7d3e7b70c6f51b706a3b90bd01833846c54d32ca32f0027f00226ff6d'
 JQ_BIN="${KCPTUN_INSTALL_DIR}/bin/jq"
 
 SUPERVISOR_SERVICE_FILE_DEBIAN_URL="${BASE_URL}/startup/supervisord.init.debain"
