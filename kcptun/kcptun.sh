@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 : <<-'EOF'
 Copyright 2017-2019 Xingwang Liao <kuoruan@gmail.com>
@@ -144,6 +144,12 @@ any_key_to_continue() {
 	stty -raw
 	stty echo
 	stty $saved
+}
+
+first_character() {
+	if [ -n "$1" ]; then
+		echo "$1" | cut -c1
+	fi
 }
 
 # 检查是否具有 root 权限
@@ -329,7 +335,8 @@ get_content() {
 			exit 1
 		fi
 
-		content="$(wget -qO- --no-check-certificate "$url")"
+		# 将所有的换行符替换为自定义标签，防止 jq 解析失败
+		content="$(wget -qO- --no-check-certificate "$url" | sed -r 's/(\\r)?\\n/#br#/g')"
 
 		if [ "$?" != "0" ] || [ -z "$content" ]; then
 			retry=$(expr $retry + 1)
@@ -521,13 +528,14 @@ get_instance_count() {
 # 通过 API 获取对应版本号 Kcptun 的 release 信息
 # 传入 Kcptun 版本号
 get_kcptun_version_info() {
-	local request_version=$1
+	local request_version="$1"
 
 	local version_content=""
 	if [ -n "$request_version" ]; then
 		local json_content=""
 		json_content="$(get_content "$KCPTUN_RELEASES_URL")"
-		version_content="$(get_json_string "$json_content" ".[] | select(.tag_name == \"${request_version}\")")"
+		local version_selector=".[] | select(.tag_name == \"${request_version}\")"
+		version_content="$(get_json_string "$json_content" "$version_selector")"
 	else
 		version_content="$(get_content "$KCPTUN_LATEST_RELEASE_URL")"
 	fi
@@ -540,7 +548,8 @@ get_kcptun_version_info() {
 		get_arch
 	fi
 
-	kcptun_release_download_url="$(get_json_string "$version_content" ".assets[] | select(.name | contains(\"$spruce_type\")) | .browser_download_url")"
+	local url_selector=".assets[] | select(.name | contains(\"${spruce_type}\")) | .browser_download_url"
+	kcptun_release_download_url="$(get_json_string "$version_content" "$url_selector")"
 
 	if [ -z "$kcptun_release_download_url" ]; then
 		return 1
@@ -552,8 +561,8 @@ get_kcptun_version_info() {
 	kcptun_release_publish_time="$(get_json_string "$version_content" '.published_at')"
 	kcptun_release_html_url="$(get_json_string "$version_content" '.html_url')"
 
-	local body=""
-	body="$(get_json_string "$version_content" '.body' | grep -vE '(^```)|(^>)|(^[[:space:]]*$)')"
+	local body_content="$(get_json_string "$version_content" '.body')"
+	local body="$(echo "$body_content" | sed 's/#br#/\n/g' | grep -vE '(^```)|(^>)|(^[[:space:]]*$)|(SUM$)')"
 
 	kcptun_release_body="$(echo "$body" | grep -vE "[0-9a-zA-Z]{32,}")"
 
@@ -561,9 +570,9 @@ get_kcptun_version_info() {
 	file_verify="$(echo "$body" | grep "$spruce_type")"
 
 	if [ -n "$file_verify" ]; then
-		local i=1
+		local i="1"
 		local split=""
-		while :
+		while true
 		do
 			split="$(echo "$file_verify" | cut -d ' ' -f$i)"
 
@@ -589,13 +598,25 @@ get_shell_version_info() {
 		return 1
 	fi
 
-	new_shell_version="$(get_json_string "$shell_version_content" '.shell_version' '[0-9]+' || "0")"
-	new_config_version="$(get_json_string "$shell_version_content" '.config_version' '[0-9]+' || "0")"
-	new_init_version="$(get_json_string "$shell_version_content" '.init_version' '[0-9]+' || "0")"
+	new_shell_version="$(get_json_string "$shell_version_content" '.shell_version' '[0-9]+')"
+	new_config_version="$(get_json_string "$shell_version_content" '.config_version' '[0-9]+')"
+	new_init_version="$(get_json_string "$shell_version_content" '.init_version' '[0-9]+')"
+
 	shell_change_log="$(get_json_string "$shell_version_content" '.change_log')"
 	config_change_log="$(get_json_string "$shell_version_content" '.config_change_log')"
 	init_change_log="$(get_json_string "$shell_version_content" '.init_change_log')"
 	new_shell_url="$(get_json_string "$shell_version_content" '.shell_url')"
+
+
+	if [ -z "$new_shell_version" ]; then
+		new_shell_version="0"
+	fi
+	if [ -z "$new_config_version" ]; then
+		new_config_version="0"
+	fi
+	if [ -z "$new_init_version" ]; then
+		new_init_version="0"
+	fi
 
 	return 0
 }
@@ -1119,7 +1140,7 @@ set_kcptun_config() {
 
 	# 设置服务运行端口
 	[ -z "$listen_port" ] && listen_port="$D_LISTEN_PORT"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请输入 Kcptun 服务端运行端口 [1~65535]
@@ -1168,7 +1189,7 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$target_port" ] && target_port="$D_TARGET_PORT"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请输入需要加速的端口 [1~65535]
@@ -1191,7 +1212,7 @@ set_kcptun_config() {
 		if [ "$target_addr" = "127.0.0.1" ] && ! port_using "$target_port"; then
 			read -p "当前没有软件使用此端口, 确定加速此端口? [y/n]: " yn
 			if [ -n "$yn" ]; then
-				case "${yn:0:1}" in
+				case "$(first_character "$yn")" in
 					y|Y)
 						;;
 					*)
@@ -1237,7 +1258,7 @@ set_kcptun_config() {
 	请尽量选择弱加密或者不加密。
 	该参数必须两端一致
 	EOF
-	while :
+	while true
 	do
 
 		for c in $crypt_list; do
@@ -1275,7 +1296,7 @@ set_kcptun_config() {
 	如果加速模式选择“手动(manual)”，
 	将进入手动档隐藏参数的设置。
 	EOF
-	while :
+	while true
 	do
 
 		for m in $mode_list; do
@@ -1314,7 +1335,7 @@ set_kcptun_config() {
 	fi
 
 	[ -z "$mtu" ] && mtu="$D_MTU"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置 UDP 数据包的 MTU (最大传输单元)值
@@ -1339,7 +1360,7 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$sndwnd" ] && sndwnd="$D_SNDWND"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置发送窗口大小(sndwnd)
@@ -1365,7 +1386,7 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$rcvwnd" ] && rcvwnd="$D_RCVWND"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置接收窗口大小(rcvwnd)
@@ -1390,7 +1411,7 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$datashard" ] && datashard="$D_DATASHARD"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置前向纠错 datashard
@@ -1416,7 +1437,7 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$parityshard" ] && parityshard="$D_PARITYSHARD"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置前向纠错 parityshard
@@ -1442,7 +1463,7 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$dscp" ] && dscp="$D_DSCP"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置差分服务代码点(DSCP)
@@ -1467,14 +1488,14 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$nocomp" ] && nocomp="$D_NOCOMP"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		是否关闭数据压缩?
 		EOF
 		read -p "(默认: ${nocomp}) [y/n]: " yn
 		if [ -n "$yn" ]; then
-			case "${yn:0:1}" in
+			case "$(first_character "$yn")" in
 				y|Y)
 					nocomp='true'
 					;;
@@ -1498,14 +1519,14 @@ set_kcptun_config() {
 	EOF
 
 	[ -z "$quiet" ] && quiet="$D_QUIET"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		是否屏蔽 open/close 日志输出?
 		EOF
 		read -p "(默认: ${quiet}) [y/n]: " yn
 		if [ -n "$yn" ]; then
-			case "${yn:0:1}" in
+			case "$(first_character "$yn")" in
 				y|Y)
 					quiet='true'
 					;;
@@ -1543,7 +1564,7 @@ set_kcptun_config() {
 	EOF
 	read -p "(默认: 否) [y/n]: " yn
 	if [ -n "$yn" ]; then
-		case "${yn:0:1}" in
+		case "$(first_character "$yn")" in
 			y|Y)
 				set_snmp
 				;;
@@ -1557,7 +1578,7 @@ set_kcptun_config() {
 	fi
 
 	[ -z "$pprof" ] && pprof="$D_PPROF"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		是否开启 pprof 性能监控?
@@ -1565,7 +1586,7 @@ set_kcptun_config() {
 		EOF
 		read -p "(默认: ${pprof}) [y/n]: " yn
 		if [ -n "$yn" ]; then
-			case "${yn:0:1}" in
+			case "$(first_character "$yn")" in
 				y|Y)
 					pprof='true'
 					;;
@@ -1605,7 +1626,7 @@ set_kcptun_config() {
 	EOF
 	read -p "(默认: 否) [y/n]: " yn
 	if [ -n "$yn" ]; then
-		case "${yn:0:1}" in
+		case "$(first_character "$yn")" in
 			y|Y)
 				set_hidden_parameters
 				;;
@@ -1630,7 +1651,7 @@ set_snmp() {
 
 	local input=""
 	[ -z "$snmpperiod" ] && snmpperiod="$D_SNMPPERIOD"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置 SNMP 记录间隔时间 snmpperiod
@@ -1661,7 +1682,7 @@ set_manual_parameters() {
 	local yn=""
 
 	[ -z "$nodelay" ] && nodelay="$D_NODELAY"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		是否启用 nodelay 模式?
@@ -1670,7 +1691,7 @@ set_manual_parameters() {
 		EOF
 		read -p "(默认: ${nodelay}) [0/1]: " input
 		if [ -n "$input" ]; then
-			case "${input:0:1}" in
+			case "$(first_character "$input")" in
 				1)
 					nodelay=1
 					;;
@@ -1694,7 +1715,7 @@ set_manual_parameters() {
 	EOF
 
 	[ -z "$interval" ] && interval="$D_INTERVAL"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置协议内部工作的 interval
@@ -1719,7 +1740,7 @@ set_manual_parameters() {
 	EOF
 
 	[ -z "$resend" ] && resend="$D_RESEND"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		是否启用快速重传模式(resend)?
@@ -1729,7 +1750,7 @@ set_manual_parameters() {
 		EOF
 		read -p "(默认: ${resend}) 请选择 [0~2]: " input
 		if [ -n "$input" ]; then
-			case "${input:0:1}" in
+			case "$(first_character "$input")" in
 				0)
 					resend=0
 					;;
@@ -1756,7 +1777,7 @@ set_manual_parameters() {
 	EOF
 
 	[ -z "$nc" ] && nc="$D_NC"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		是否关闭流控(nc)?
@@ -1765,7 +1786,7 @@ set_manual_parameters() {
 		EOF
 		read -p "(默认: ${nc}) [0/1]: " input
 		if [ -n "$input" ]; then
-			case "${input:0:1}" in
+			case "$(first_character "$input")" in
 				0)
 					nc=0
 					;;
@@ -1793,14 +1814,14 @@ set_hidden_parameters() {
 	local yn=""
 
 	[ -z "$acknodelay" ] && acknodelay="$D_ACKNODELAY"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		是否启用 acknodelay 模式?
 		EOF
 		read -p "(默认: ${acknodelay}) [y/n]: " yn
 		if [ -n "$yn" ]; then
-			case "${yn:0:1}" in
+			case "$(first_character "$yn")" in
 				y|Y)
 					acknodelay="true"
 					;;
@@ -1824,7 +1845,7 @@ set_hidden_parameters() {
 	EOF
 
 	[ -z "$sockbuf" ] && sockbuf="$D_SOCKBUF"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置 UDP 收发缓冲区大小(sockbuf)
@@ -1849,7 +1870,7 @@ set_hidden_parameters() {
 	EOF
 
 	[ -z "$keepalive" ] && keepalive="$D_KEEPALIVE"
-	while :
+	while true
 	do
 		cat >&1 <<-'EOF'
 		请设置 Keepalive 的间隔时间
@@ -2047,7 +2068,7 @@ select_instance() {
 		done
 
 		local sel=""
-		while :
+		while true
 		do
 			read -p "请选择 [1~${i}]: " sel
 			if [ -n "$sel" ]; then
@@ -2101,7 +2122,7 @@ get_installed_version() {
 			chmod a+x "$server_file"
 		fi
 
-		echo "$(${server_file} -v 2>/dev/null | awk '{printf $3}')"
+		echo "$(${server_file} -v 2>/dev/null | awk '{print $3}')"
 	fi
 }
 
@@ -2132,7 +2153,7 @@ load_instance_config() {
 	lines="$(get_json_string "$config_content" 'to_entries | map("\(.key)=\(.value | @sh)") | .[]')"
 
 	OLDIFS=$IFS
-	IFS=$'\n'
+	IFS=$(printf '\n')
 	for line in $lines; do
 		eval "$line"
 	done
@@ -2179,16 +2200,16 @@ show_current_instance_info() {
 	local server_ip=""
 	server_ip="$(get_server_ip)"
 
-	printf "服务器IP: \033[41;37m ${server_ip} \033[0m\n"
-	printf "端口: \033[41;37m ${listen_port} \033[0m\n"
-	printf "加速地址: \033[41;37m ${target_addr}:${target_port}\033[0m\n"
+	printf '服务器IP: \033[41;37m %s \033[0m\n' "$server_ip"
+	printf '端口: \033[41;37m %s \033[0m\n' "$listen_port"
+	printf '加速地址: \033[41;37m %s:%s \033[0m\n' "$target_addr" "$target_port"
 
 	show_configs() {
 		local k; local v
 		for k in "$@"; do
 			v="$(eval echo "\$$k")"
 			if [ -n "$v" ]; then
-				printf "${k}: \033[41;37m ${v} \033[0m\n"
+				printf '%s: \033[41;37m %s \033[0m\n' "$k" "$v"
 			fi
 		done
 	}
@@ -2205,13 +2226,14 @@ show_current_instance_info() {
 	# 这里输出的是客户端所使用的配置信息
 	# 客户端的 *remoteaddr* 端口号为服务端的 *listen_port*
 	# 客户端的 *localaddr* 端口号被设置为了服务端的加速端口
-	read -d '' client_config <<-EOF
+	client_config="$(cat <<-EOF
 	{
 	  "localaddr": ":${target_port}",
 	  "remoteaddr": "${server_ip}:${listen_port}",
 	  "key": "${key}"
 	}
 	EOF
+	)"
 
 	gen_client_configs() {
 		local k; local v
@@ -2348,7 +2370,7 @@ do_uninstall() {
 
 	read -p "(默认: 不卸载) 请选择 [y/n]: " yn
 	if [ -n "$yn" ]; then
-		case "${yn:0:1}" in
+		case "$(first_character "$yn")" in
 			y|Y)
 				if command_exists systemctl; then
 					systemctl disable supervisord.service
@@ -2427,7 +2449,7 @@ do_update() {
 			cat >&1 <<-EOF
 			发现一键安装脚本更新, 版本号: ${new_shell_version}
 			更新说明:
-			$(printf "${shell_change_log}\n")
+			$(printf '%s\n' "$shell_change_log")
 			EOF
 			any_key_to_continue
 
@@ -2453,7 +2475,7 @@ do_update() {
 			cat >&1 <<-EOF
 			发现 Kcptun 配置更新, 版本号: v${new_config_version}
 			更新说明:
-			$(printf "${config_change_log}\n")
+			$(printf '%s\n' "$config_change_log")
 			需要重新设置 Kcptun
 			EOF
 			any_key_to_continue
@@ -2468,7 +2490,7 @@ do_update() {
 			cat >&1 <<-EOF
 			发现服务启动脚本文件更新, 版本号: v${new_init_version}
 			更新说明:
-			$(printf "${init_change_log}\n")
+			$(printf '%s\n' "$init_change_log")
 			EOF
 
 			any_key_to_continue
@@ -2501,7 +2523,7 @@ do_update() {
 		发现 Kcptun 新版本 ${kcptun_release_tag_name}
 		$([ "$kcptun_release_prerelease" = "true" ] && printf "\033[41;37m 注意: 该版本为预览版, 请谨慎更新 \033[0m")
 		更新说明:
-		$(printf "${kcptun_release_body}\n")
+		$(printf '%s\n' "$kcptun_release_body")
 		EOF
 		any_key_to_continue
 
@@ -2691,9 +2713,9 @@ instance_reconfig() {
 	EOF
 	read -p "(默认: 1) 请选择: " sel
 	echo
-	[ -z "$sel" ] && sel=1
+	[ -z "$sel" ] && sel="1"
 
-	case "${sel:0:1}" in
+	case "$(first_character "$sel")" in
 		2)
 			echo "正在打开配置文件, 请手动修改..."
 			local config_file=""
@@ -2753,7 +2775,7 @@ manual_install() {
 
 	local tag_name=$1
 
-	while :
+	while true
 	do
 		if [ -z "$tag_name" ]; then
 			cat >&1 <<-'EOF'
@@ -2852,7 +2874,7 @@ installed_check() {
 		cat >&1 <<-EOF
 		检测到你已安装 Kcptun 服务端, 已配置的实例个数为 ${instance_count} 个
 		EOF
-		while :
+		while true
 		do
 			cat >&1 <<-'EOF'
 			请选择你希望的操作:
