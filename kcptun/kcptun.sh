@@ -130,7 +130,7 @@ command_exists() {
 
 # 判断输入内容是否为数字
 is_number() {
-	expr $1 + 1 >/dev/null 2>&1
+	expr "$1" + 1 >/dev/null 2>&1
 }
 
 # 按任意键继续
@@ -624,7 +624,7 @@ get_shell_version_info() {
 # 下载并安装 Kcptun
 install_kcptun() {
 	if [ -z "$kcptun_release_download_url" ]; then
-		get_kcptun_version_info $1
+		get_kcptun_version_info "$1"
 
 		if [ "$?" != "0" ]; then
 			cat >&2 <<-'EOF'
@@ -1116,18 +1116,18 @@ enable_supervisor() {
 
 set_kcptun_config() {
 	is_port() {
-		local port=$1
+		local port="$1"
 		is_number "$port" && \
 			[ $port -ge 1 ] && [ $port -le 65535 ]
 	}
 
 	port_using() {
-		local port=$1
+		local port="$1"
 
 		if command_exists netstat; then
-			( netstat -ntul | grep -qE "[0-9:]:${port}\s" )
+			( netstat -ntul | grep -qE "[0-9:*]:${port}\s" )
 		elif command_exists ss; then
-			( ss -ntul | grep -qE "[0-9:]:${port}\s" )
+			( ss -ntul | grep -qE "[0-9:*]:${port}\s" )
 		else
 			return 0
 		fi
@@ -1898,7 +1898,7 @@ set_hidden_parameters() {
 gen_kcptun_config() {
 	mk_file_dir() {
 		local dir=""
-		dir="$(dirname $1)"
+		dir="$(dirname "$1")"
 		local mod=$2
 
 		if [ ! -d "$dir" ]; then
@@ -2773,7 +2773,7 @@ manual_install() {
 	你选择了自定义版本安装, 正在开始操作...
 	EOF
 
-	local tag_name=$1
+	local tag_name="$1"
 
 	while true
 	do
