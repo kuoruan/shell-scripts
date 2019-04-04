@@ -781,10 +781,9 @@ install_deps() {
 				fi
 
 				# CentOS 等红帽系操作系统的软件库中可能不包括 python-pip
-				# 通常需要先安装 epel-release 扩展库
-				# 先在这里尝试安装 python-pip
+				# epel-release 扩展库中包含的 pip 有一些问题，默认不使用
 				if ! command_exists pip; then
-					( set -x; sleep 3; yum -y -q install python-pip || true )
+					( set -x; sleep 3; yum -y -q --disablerepo=epel install python-pip || true )
 				fi
 
 				# 如果 python-pip 安装失败，检测是否已安装 python 环境
@@ -903,16 +902,21 @@ install_supervisor() {
 
 		2. 对于 Redhat 系的 Linux 系统，可以尝试使用：
 		  sudo yum install -y python-pip 来进行安装
-		  * 注：如果提示未找到该软件，请先使用以下命令来安装扩展软件仓库：
-		      sudo yum install -y epel-release
-		    然后再次安装 python-pip
+		  * 注：由于 epel-release 库中的 python-pip 在 CentOS 6 下的更新有问题，
+		    故脚本会忽略该扩展库中的的 python-pip
 
 		3. 如果以上方法都失败了，请使用以下命令来手动安装：
 		  wget -qO- --no-check-certificate https://bootstrap.pypa.io/get-pip.py | python
 		  * python 2.6 的用户请使用：
 		    wget -qO- --no-check-certificate https://bootstrap.pypa.io/2.6/get-pip.py | python
 
-		pip 安装完毕之后，请重新运行安装脚本。
+		4. pip 安装完毕之后，先运行一下更新命令：
+		  pip install --upgrade pip
+
+		  再检查一下 pip 的版本：
+		  pip -V
+
+		一切无误后，请重新运行安装脚本。
 		EOF
 		exit 1
 	fi
