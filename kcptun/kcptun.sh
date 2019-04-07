@@ -911,7 +911,7 @@ install_supervisor() {
 		    wget -qO- --no-check-certificate https://bootstrap.pypa.io/2.6/get-pip.py | python
 
 		4. pip 安装完毕之后，先运行一下更新命令：
-		  pip install --upgrade pip
+		  pip3 install --upgrade pip
 
 		  再检查一下 pip 的版本：
 		  pip -V
@@ -931,20 +931,20 @@ install_supervisor() {
 		# 已安装 pip 时先尝试更新一下
 		(
 			set -x
-			pip install --upgrade pip || true
+			pip3 install --upgrade pip || true
 		)
 	fi
 
 	(
 		set -x
-		pip install supervisor
+		pip3 install supervisor
 	)
 
 	if [ "$?" != "0" ]; then
 		cat >&2 <<-EOF
 		错误: 安装 Supervisor 失败，
 		请尝试使用
-		  pip install supervisor
+		  pip3 install supervisor
 		来手动安装。
 		EOF
 
@@ -2507,7 +2507,7 @@ do_update() {
 
 	# 如果是通过 pip 安装的
 	if ( pip list --format columns 2>/dev/null | grep -q "supervisor" ); then
-		pip install --upgrade pip supervisor >/dev/null 2>&1
+		pip3 install --upgrade pip supervisor >/dev/null 2>&1
 	else
 		easy_install -U supervisor >/dev/null 2>&1
 	fi
