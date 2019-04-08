@@ -1,7 +1,7 @@
 {
-	"shell_version": 23,
+	"shell_version": 24,
 	"shell_url": "https://github.com/kuoruan/shell-scripts/raw/master/kcptun/kcptun.sh",
-	"change_log": "1. 回滚至 jq 1.5, 以支持 OpenVZ CentOS 6 x86",
+	"change_log": "1. 支持 POSIX 标准，运行环境不限于 bash；2. 由于 Supervisor 4.0 不支持 python 2.6，修复了对 python 2.6 的支持；3. 其他调整。",
 	"config_version": 6,
 	"config_change_log": "1.支持 snmp 和 pprof 参数;\n2.输出新版手机端参数",
 	"init_version": 3,
