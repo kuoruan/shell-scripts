@@ -956,7 +956,7 @@ install_supervisor() {
 	else
 		(
 			set -x
-			pip install supervisor
+			pip install --upgrade supervisor
 		)
 	fi
 
@@ -2526,13 +2526,6 @@ do_update() {
 			set -sed -i "s/^INIT_VERSION=${INIT_VERSION}/INIT_VERSION=${new_init_version}/" \
 				"$shell_path"
 		fi
-	fi
-
-	# 如果是通过 pip 安装的
-	if ( pip list --format columns 2>/dev/null | grep -q "supervisor" ); then
-		pip install --upgrade pip supervisor >/dev/null 2>&1
-	else
-		easy_install -U supervisor >/dev/null 2>&1
 	fi
 
 	echo "开始获取 Kcptun 版本信息..."
