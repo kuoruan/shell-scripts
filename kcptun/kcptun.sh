@@ -68,6 +68,7 @@ D_INTERVAL=20
 D_RESEND=2
 D_NC=1
 D_SOCKBUF=4194304
+D_SMUXBUF=4194304
 D_KEEPALIVE=10
 # ======================
 
@@ -1639,6 +1640,7 @@ set_kcptun_config() {
 	unset_hidden_parameters() {
 		acknodelay=""
 		sockbuf=""
+		smuxbuf=""
 		keepalive=""
 		cat >&1 <<-EOF
 		---------------------------
@@ -1896,6 +1898,31 @@ set_hidden_parameters() {
 	---------------------------
 	EOF
 
+	[ -z "$smuxbuf" ] && smuxbuf="$D_SMUXBUF"
+	while true
+	do
+		cat >&1 <<-'EOF'
+		请设置 de-mux 缓冲区大小(smuxbuf)
+		EOF
+		read -p "(单位: MB, 默认: $(expr ${smuxbuf} / 1024 / 1024)): " input
+		if [ -n "$input" ]; then
+			if ! is_number "$input" || [ $input -le 0 ]; then
+				echo "输入有误, 请输入大于0的数字!"
+				continue
+			fi
+
+			smuxbuf=$(expr $input * 1024 * 1024)
+		fi
+		break
+	done
+
+	input=""
+	cat >&1 <<-EOF
+	---------------------------
+	smuxbuf = ${smuxbuf}
+	---------------------------
+	EOF
+
 	[ -z "$keepalive" ] && keepalive="$D_KEEPALIVE"
 	while true
 	do
@@ -2001,7 +2028,7 @@ gen_kcptun_config() {
 	}
 
 	write_configs_to_file "quiet" "snmplog" "snmpperiod" "pprof" "acknodelay" "nodelay" \
-		"interval" "resend" "nc" "sockbuf" "keepalive"
+		"interval" "resend" "nc" "sockbuf" "smuxbuf" "keepalive"
 
 	if ! grep -q "^${run_user}:" '/etc/passwd'; then
 		(
@@ -2243,7 +2270,7 @@ show_current_instance_info() {
 
 	show_configs "key" "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
 		"parityshard" "dscp" "nocomp" "quiet" "nodelay" "interval" "resend" \
-		"nc" "acknodelay" "sockbuf" "keepalive"
+		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive"
 
 	show_version_and_client_url
 
@@ -2285,7 +2312,7 @@ show_current_instance_info() {
 
 	gen_client_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
 		"parityshard" "dscp" "nocomp" "quiet" "nodelay" "interval" "resend" \
-		"nc" "acknodelay" "sockbuf" "keepalive"
+		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive"
 
 	cat >&1 <<-EOF
 
@@ -2319,7 +2346,7 @@ show_current_instance_info() {
 
 	gen_client_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
 		"parityshard" "dscp" "nocomp" "quiet" "nodelay" "interval" "resend" \
-		"nc" "acknodelay" "sockbuf" "keepalive"
+		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive"
 
 	cat >&1 <<-EOF
 
