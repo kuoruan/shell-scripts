@@ -1040,7 +1040,7 @@ install_supervisor() {
 			fi
 		fi
 
-		if [ "$?" != "0" ]; then
+		if [ "$rvt" != "0" ]; then
 			echo "创建 Supervisor 配置文件失败!"
 			exit 1
 		fi
