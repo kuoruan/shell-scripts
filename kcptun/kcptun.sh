@@ -952,7 +952,7 @@ install_supervisor() {
 	if [ "$is_python_26" = "true" ]; then
 		(
 			set -x
-			pip install supervisor==3.4.0
+			pip install 'supervisor>=3.0.0,<4.0.0'
 		)
 	else
 		(
@@ -969,7 +969,7 @@ install_supervisor() {
 		来手动安装。
 		Supervisor 从 4.0 开始已不支持 python 2.6 及以下版本
 		python 2.6 的用户请使用：
-		  pip install supervisor==3.4.0
+		  pip install 'supervisor>=3.0.0,<4.0.0'
 		EOF
 
 		exit 1
@@ -1012,10 +1012,33 @@ install_supervisor() {
 			exit 1
 		fi
 
-		(
-			set -x
-			echo_supervisord_conf >"$cfg_file" 2>/dev/null
-		)
+		local result=$(echo_supervisord_conf >"$cfg_file" 2>&1)
+		local rvt="$?"
+
+		if [ "$rvt" != "0" ] && ( echo "$result" | grep -q "meld3" ) ; then
+			# https://github.com/Supervisor/meld3/issues/23
+			(
+				set -x
+				local temp="$(mktemp -d)"
+				local pwd="$(pwd)"
+
+				download_file 'https://pypi.python.org/packages/source/m/meld3/meld3-1.0.2.tar.gz' \
+					"$temp/meld3.tar.gz"
+
+				cd "$temp"
+				tar -zxf "$temp/meld3.tar.gz" --strip=1
+				python setup.py install
+				cd "$pwd"
+			)
+
+			if [ "$?" = "0" ] ; then
+				(
+					set -x
+					echo_supervisord_conf >"$cfg_file"
+				)
+				rvt="$?"
+			fi
+		fi
 
 		if [ "$?" != "0" ]; then
 			echo "创建 Supervisor 配置文件失败!"
