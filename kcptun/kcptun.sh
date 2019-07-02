@@ -1012,37 +1012,41 @@ install_supervisor() {
 			exit 1
 		fi
 
-		local result=$(echo_supervisord_conf >"$cfg_file" 2>&1)
+		local config_content=$(echo_supervisord_conf 2>&1)
 		local rvt="$?"
 
-		if [ "$rvt" != "0" ] && ( echo "$result" | grep -q "meld3" ) ; then
-			# https://github.com/Supervisor/meld3/issues/23
-			(
-				set -x
-				local temp="$(mktemp -d)"
-				local pwd="$(pwd)"
-
-				download_file 'https://pypi.python.org/packages/source/m/meld3/meld3-1.0.2.tar.gz' \
-					"$temp/meld3.tar.gz"
-
-				cd "$temp"
-				tar -zxf "$temp/meld3.tar.gz" --strip=1
-				python setup.py install
-				cd "$pwd"
-			)
-
-			if [ "$?" = "0" ] ; then
+		if [ "$rvt" = "0" ] ; then
+			echo "$config_content" >"$cfg_file"
+		else
+			if [ "$rvt" != "0" ] && ( echo "$config_content" | grep -q "meld3" ) ; then
+				# https://github.com/Supervisor/meld3/issues/23
 				(
 					set -x
-					echo_supervisord_conf >"$cfg_file"
-				)
-				rvt="$?"
-			fi
-		fi
+					local temp="$(mktemp -d)"
+					local pwd="$(pwd)"
 
-		if [ "$rvt" != "0" ]; then
-			echo "创建 Supervisor 配置文件失败!"
-			exit 1
+					download_file 'https://pypi.python.org/packages/source/m/meld3/meld3-1.0.2.tar.gz' \
+						"$temp/meld3.tar.gz"
+
+					cd "$temp"
+					tar -zxf "$temp/meld3.tar.gz" --strip=1
+					python setup.py install
+					cd "$pwd"
+				)
+
+				if [ "$?" = "0" ] ; then
+					(
+						set -x
+						echo_supervisord_conf >"$cfg_file"
+					)
+					rvt="$?"
+				fi
+			fi
+
+			if [ "$rvt" != "0" ]; then
+				echo "创建 Supervisor 配置文件失败!"
+				exit 1
+			fi
 		fi
 	fi
 
