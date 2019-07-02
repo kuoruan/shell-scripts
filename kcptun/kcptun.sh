@@ -1018,7 +1018,7 @@ install_supervisor() {
 		if [ "$rvt" = "0" ] ; then
 			echo "$config_content" >"$cfg_file"
 		else
-			if [ "$rvt" != "0" ] && ( echo "$config_content" | grep -q "meld3" ) ; then
+			if ( echo "$config_content" | grep -q "meld3" ) ; then
 				# https://github.com/Supervisor/meld3/issues/23
 				(
 					set -x
