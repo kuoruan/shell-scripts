@@ -1012,7 +1012,7 @@ install_supervisor() {
 			exit 1
 		fi
 
-		local config_content=$(echo_supervisord_conf 2>&1)
+		local config_content="$(echo_supervisord_conf 2>&1)"
 		local rvt="$?"
 
 		if [ "$rvt" = "0" ] ; then
