@@ -15,7 +15,7 @@ $ tree
 * 安装命令：
 
 ```sh
-wget --no-check-certificate https://github.com/kuoruan/shell-scripts/raw/master/kcptun/kcptun.sh
+wget --no-check-certificate -O kcptun.sh https://github.com/kuoruan/shell-scripts/raw/master/kcptun/kcptun.sh
 sh kcptun.sh
 ```
 
@@ -55,7 +55,7 @@ Kcptun 相关命令:
 * 安装命令：
 
 ```sh
-wget --no-check-certificate https://github.com/kuoruan/shell-scripts/raw/master/ovz-bbr/ovz-bbr-installer.sh
+wget --no-check-certificate -O ovz-bbr-installer.sh https://github.com/kuoruan/shell-scripts/raw/master/ovz-bbr/ovz-bbr-installer.sh
 sh ovz-bbr-installer.sh
 ```
 
