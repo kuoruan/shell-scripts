@@ -58,6 +58,7 @@ D_PARITYSHARD=3
 D_DSCP=0
 D_NOCOMP='false'
 D_QUIET='false'
+D_KCP='false'
 D_SNMPPERIOD=60
 D_PPROF='false'
 
@@ -1604,6 +1605,37 @@ set_kcptun_config() {
 	---------------------------
 	EOF
 
+	[ -z "$kcp" ] && kcp="$D_KCP"
+	while true
+	do
+		cat >&1 <<-'EOF'
+		是否使用 KCP 传输
+		EOF
+		read -p "(默认: ${kcp}) [y/n]: " yn
+		if [ -n "$yn" ]; then
+			case "$(first_character "$yn")" in
+				y|Y)
+					kcp='true'
+					;;
+				n|N)
+					kcp='false'
+					;;
+				*)
+					echo "输入有误，请重新输入!"
+					continue
+					;;
+			esac
+		fi
+		break
+	done
+
+	yn=""
+	cat >&1 <<-EOF
+	---------------------------
+	kcp = ${kcp}
+	---------------------------
+	EOF
+
 	unset_snmp() {
 		snmplog=""
 		snmpperiod=""
@@ -2027,7 +2059,9 @@ gen_kcptun_config() {
 	  "datashard": ${datashard},
 	  "parityshard": ${parityshard},
 	  "dscp": ${dscp},
-	  "nocomp": ${nocomp}
+	  "nocomp": ${nocomp},
+	  "quiet": ${quiet},
+	  "tcp": ${tcp}
 	}
 	EOF
 
@@ -2054,7 +2088,7 @@ gen_kcptun_config() {
 		fi
 	}
 
-	write_configs_to_file "quiet" "snmplog" "snmpperiod" "pprof" "acknodelay" "nodelay" \
+	write_configs_to_file "snmplog" "snmpperiod" "pprof" "acknodelay" "nodelay" \
 		"interval" "resend" "nc" "sockbuf" "smuxbuf" "keepalive"
 
 	if ! grep -q "^${run_user}:" '/etc/passwd'; then
@@ -2296,7 +2330,7 @@ show_current_instance_info() {
 	}
 
 	show_configs "key" "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
-		"parityshard" "dscp" "nocomp" "quiet" "nodelay" "interval" "resend" \
+		"parityshard" "dscp" "nocomp" "quiet" "tcp" "nodelay" "interval" "resend" \
 		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive"
 
 	show_version_and_client_url
