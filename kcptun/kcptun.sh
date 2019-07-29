@@ -1616,6 +1616,7 @@ set_kcptun_config() {
 			case "$(first_character "$yn")" in
 				y|Y)
 					tcp='true'
+					run_user="root"
 					;;
 				n|N)
 					tcp='false'
@@ -2372,7 +2373,7 @@ show_current_instance_info() {
 	}
 
 	gen_client_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
-		"parityshard" "dscp" "nocomp" "quiet" "nodelay" "interval" "resend" \
+		"parityshard" "dscp" "nocomp" "quiet" "tcp" "nodelay" "interval" "resend" \
 		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive"
 
 	cat >&1 <<-EOF
@@ -2382,7 +2383,7 @@ show_current_instance_info() {
 	EOF
 
 	local mobile_config="key=${key}"
-	gen_client_configs() {
+	gen_mobile_configs() {
 		local k; local v
 		for k in "$@"; do
 			if [ "$k" = "sndwnd" ]; then
@@ -2405,8 +2406,8 @@ show_current_instance_info() {
 		done
 	}
 
-	gen_client_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
-		"parityshard" "dscp" "nocomp" "quiet" "nodelay" "interval" "resend" \
+	gen_mobile_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
+		"parityshard" "dscp" "nocomp" "quiet" "tcp" "nodelay" "interval" "resend" \
 		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive"
 
 	cat >&1 <<-EOF
