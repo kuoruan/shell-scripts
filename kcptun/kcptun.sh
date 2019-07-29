@@ -58,7 +58,7 @@ D_PARITYSHARD=3
 D_DSCP=0
 D_NOCOMP='false'
 D_QUIET='false'
-D_KCP='false'
+D_TCP='false'
 D_SNMPPERIOD=60
 D_PPROF='false'
 
@@ -1605,20 +1605,20 @@ set_kcptun_config() {
 	---------------------------
 	EOF
 
-	[ -z "$kcp" ] && kcp="$D_KCP"
+	[ -z "$tcp" ] && tcp="$D_TCP"
 	while true
 	do
 		cat >&1 <<-'EOF'
-		是否使用 KCP 传输
+		是否使用 TCP 传输
 		EOF
-		read -p "(默认: ${kcp}) [y/n]: " yn
+		read -p "(默认: ${tcp}) [y/n]: " yn
 		if [ -n "$yn" ]; then
 			case "$(first_character "$yn")" in
 				y|Y)
-					kcp='true'
+					tcp='true'
 					;;
 				n|N)
-					kcp='false'
+					tcp='false'
 					;;
 				*)
 					echo "输入有误，请重新输入!"
@@ -1632,7 +1632,7 @@ set_kcptun_config() {
 	yn=""
 	cat >&1 <<-EOF
 	---------------------------
-	kcp = ${kcp}
+	tcp = ${tcp}
 	---------------------------
 	EOF
 
