@@ -1616,7 +1616,6 @@ set_kcptun_config() {
 			case "$(first_character "$yn")" in
 				y|Y)
 					tcp='true'
-					run_user="root"
 					;;
 				n|N)
 					tcp='false'
@@ -1629,6 +1628,10 @@ set_kcptun_config() {
 		fi
 		break
 	done
+
+	if [ "$tcp" = "true" ]; then
+		run_user="root"
+	fi
 
 	yn=""
 	cat >&1 <<-EOF
@@ -2863,6 +2866,14 @@ instance_reconfig() {
 
 	if command_exists supervisorctl; then
 		supervisorctl restart "kcptun${current_instance_id}"
+
+		if [ "$?" != "0" ]; then
+			cat >&2 <<-'EOF'
+			重启 Supervisor 失败, Kcptun 无法正常工作!
+			请查看日志获取原因，或者反馈给脚本作者。
+			EOF
+			exit 1
+		fi
 	else
 		start_supervisor
 	fi
