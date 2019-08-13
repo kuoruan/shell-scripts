@@ -1004,6 +1004,8 @@ install_supervisor() {
 
 	local cfg_file='/etc/supervisor/supervisord.conf'
 
+	local rvt="0"
+
 	if [ ! -s "$cfg_file" ]; then
 		if ! command_exists echo_supervisord_conf; then
 			cat >&2 <<-'EOF'
@@ -1013,42 +1015,43 @@ install_supervisor() {
 			exit 1
 		fi
 
-		local config_content="$(echo_supervisord_conf 2>&1)"
-		local rvt="$?"
+		(
+			set -x
+			echo_supervisord_conf >"$cfg_file" 2>&1
+		)
+		rvt="$?"
+	fi
 
-		if [ "$rvt" = "0" ] ; then
-			echo "$config_content" >"$cfg_file"
-		else
-			if ( echo "$config_content" | grep -q "meld3" ) ; then
-				# https://github.com/Supervisor/meld3/issues/23
-				(
-					set -x
-					local temp="$(mktemp -d)"
-					local pwd="$(pwd)"
+	if ( cat "$cfg_file" | grep -q "DistributionNotFound: meld3" ); then
+		rvt="1"
+		# https://github.com/Supervisor/meld3/issues/23
+		(
+			set -x
+			local temp="$(mktemp -d)"
+			local pwd="$(pwd)"
 
-					download_file 'https://pypi.python.org/packages/source/m/meld3/meld3-1.0.2.tar.gz' \
-						"$temp/meld3.tar.gz"
+			download_file 'https://pypi.python.org/packages/source/m/meld3/meld3-1.0.2.tar.gz' \
+				"$temp/meld3.tar.gz"
 
-					cd "$temp"
-					tar -zxf "$temp/meld3.tar.gz" --strip=1
-					python setup.py install
-					cd "$pwd"
-				)
+			cd "$temp"
+			tar -zxf "$temp/meld3.tar.gz" --strip=1
+			python setup.py install
+			cd "$pwd"
+		)
 
-				if [ "$?" = "0" ] ; then
-					(
-						set -x
-						echo_supervisord_conf >"$cfg_file"
-					)
-					rvt="$?"
-				fi
-			fi
-
-			if [ "$rvt" != "0" ]; then
-				echo "创建 Supervisor 配置文件失败!"
-				exit 1
-			fi
+		if [ "$?" = "0" ] ; then
+			(
+				set -x
+				echo_supervisord_conf >"$cfg_file" 2>/dev/null
+			)
+			rvt="$?"
 		fi
+	fi
+
+	if [ "$rvt" != "0" ]; then
+		rm -f "$cfg_file"
+		echo "创建 Supervisor 配置文件失败!"
+		exit 1
 	fi
 
 	if ! grep -q '^files[[:space:]]*=[[:space:]]*/etc/supervisor/conf.d/\*\.conf$' "$cfg_file"; then
