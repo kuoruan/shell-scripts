@@ -209,30 +209,17 @@ get_os_info() {
 		lsb_dist="$(lsb_release -si)"
 	fi
 
-	if [ -z "$lsb_dist" ] && [ -r /etc/lsb-release ]; then
-		lsb_dist="$(. /etc/lsb-release && echo "$DISTRIB_ID")"
+	if [ -z "$lsb_dist" ]; then
+		[ -r /etc/lsb-release ] && lsb_dist="$(. /etc/lsb-release && echo "$DISTRIB_ID")"
+		[ -r /etc/debian_version ] && lsb_dist='debian'
+		[ -r /etc/fedora-release ] && lsb_dist='fedora'
+		[ -r /etc/oracle-release ] && lsb_dist='oracleserver'
+		[ -r /etc/centos-release ] && lsb_dist='centos'
+		[ -r /etc/redhat-release ] && lsb_dist='redhat'
+		[ -r /etc/photon-release ] && lsb_dist='photon'
+		[ -r /etc/os-release ] && lsb_dist="$(. /etc/os-release && echo "$ID")"
 	fi
-	if [ -z "$lsb_dist" ] && [ -r /etc/debian_version ]; then
-		lsb_dist='debian'
-	fi
-	if [ -z "$lsb_dist" ] && [ -r /etc/fedora-release ]; then
-		lsb_dist='fedora'
-	fi
-	if [ -z "$lsb_dist" ] && [ -r /etc/oracle-release ]; then
-		lsb_dist='oracleserver'
-	fi
-	if [ -z "$lsb_dist" ] && [ -r /etc/centos-release ]; then
-		lsb_dist='centos'
-	fi
-	if [ -z "$lsb_dist" ] && [ -r /etc/redhat-release ]; then
-		lsb_dist='redhat'
-	fi
-	if [ -z "$lsb_dist" ] && [ -r /etc/photon-release ]; then
-		lsb_dist='photon'
-	fi
-	if [ -z "$lsb_dist" ] && [ -r /etc/os-release ]; then
-		lsb_dist="$(. /etc/os-release && echo "$ID")"
-	fi
+	
 
 	lsb_dist="$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')"
 
