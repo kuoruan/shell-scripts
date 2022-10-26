@@ -1945,7 +1945,7 @@ set_hidden_parameters() {
 				continue
 			fi
 
-			sockbuf=$(expr $input * 1024 * 1024)
+			sockbuf=$(expr $input \* 1024 \* 1024)
 		fi
 		break
 	done
@@ -1970,7 +1970,7 @@ set_hidden_parameters() {
 				continue
 			fi
 
-			smuxbuf=$(expr $input * 1024 * 1024)
+			smuxbuf=$(expr $input \* 1024 \* 1024)
 		fi
 		break
 	done
