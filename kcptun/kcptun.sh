@@ -2032,31 +2032,31 @@ set_hidden_parameters() {
 
 	cat >&1 <<-EOF
 	---------------------------
-	keepalive = ${keepalive}
+	$smuxver = ${smuxver}
 	---------------------------
 	EOF
 
-	[ -z "$keepalive" ] && keepalive="$D_KEEPALIVE"
+	[ -z "$streambuf" ] && streambuf="$D_STREAMBUF"
 	while true
 	do
 		cat >&1 <<-'EOF'
-		请设置 Keepalive 的间隔时间
+		请设置 streambuf 大小，官方文档介绍本值不宜过大
 		EOF
-		read -p "(单位: s, 默认值: ${keepalive}, 前值: 5): " input
+		read -p "(单位: MB, 默认: $(expr ${smuxbuf} / 1024 / 1024)): " input
 		if [ -n "$input" ]; then
 			if ! is_number "$input" || [ $input -le 0 ]; then
 				echo "输入有误, 请输入大于0的数字!"
 				continue
 			fi
 
-			keepalive=$input
+			smuxbuf=$(expr $input \* 1024 \* 1024)
 		fi
 		break
 	done
 
 	cat >&1 <<-EOF
 	---------------------------
-	keepalive = ${keepalive}
+	streambuf = ${streambuf}
 	---------------------------
 	EOF
 }
