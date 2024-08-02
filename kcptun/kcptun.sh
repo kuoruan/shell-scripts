@@ -1208,11 +1208,16 @@ set_kcptun_config() {
         if echo "$input" | grep -qE '^[0-9]+-[0-9]+$'; then
             range_start=$(echo "$input" | cut -d'-' -f1)
             range_end=$(echo "$input" | cut -d'-' -f2)
-            if [ "$range_start" -le "$current_listen_port" ] && [ "$current_listen_port" -le "$range_end" ]; then
-                #echo "current_listen_port 在输入的范围内"
-                listen_port="$input"
+            if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && [ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && [ "$range_start" -le "$range_end" ]; then
+                if [ "$range_start" -le "$current_listen_port" ] && [ "$current_listen_port" -le "$range_end" ]; then
+                    echo "current_listen_port 在输入的范围内"
+                    listen_port="$input"
+                else
+                    echo "current_listen_port 不在输入的范围内, 请重新输入!"
+                    continue
+                fi
             else
-                echo "current_listen_port 不在输入的范围内, 请重新输入!"
+                echo "端口范围无效, 请输入类似 3000-5000 的有效端口范围!"
                 continue
             fi
         elif is_port "$input"; then
