@@ -1209,19 +1209,38 @@ set_kcptun_config() {
             range_start=$(echo "$input" | cut -d'-' -f1)
             range_end=$(echo "$input" | cut -d'-' -f2)
             if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && [ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && [ "$range_start" -le "$range_end" ]; then
-                if [ "$range_start" -le "$current_listen_port" ] && [ "$current_listen_port" -le "$range_end" ]; then
-                    echo "current_listen_port 在输入的范围内"
-                    listen_port="$input"
+                echo "$current_listen_port"
+                if echo "$current_listen_port" | grep -qE '^[0-9]+-[0-9]+$'; then
+                    current_range_start=$(echo "$current_listen_port" | cut -d'-' -f1)
+                    current_range_end=$(echo "$current_listen_port" | cut -d'-' -f2)
+                    if [ "$range_start" -le "$current_range_end" ] && [ "$range_end" -ge "$current_range_start" ]; then
+                        # echo "current_listen_port 在输入的范围内"
+                        listen_port="$input"
+                    else
+                        echo "current_listen_port 不在输入的范围内, 请重新输入!"
+                        continue
+                    fi
                 else
-                    echo "current_listen_port 不在输入的范围内, 请重新输入!"
-                    continue
+                    listen_port="$input"
                 fi
             else
                 echo "端口范围无效, 请输入类似 3000-5000 的有效端口范围!"
                 continue
             fi
         elif is_port "$input"; then
-            listen_port="$input"
+            if echo "$current_listen_port" | grep -qE '^[0-9]+-[0-9]+$'; then
+                current_range_start=$(echo "$current_listen_port" | cut -d'-' -f1)
+                current_range_end=$(echo "$current_listen_port" | cut -d'-' -f2)
+                if [ "$input" -ge "$current_range_start" ] && [ "$input" -le "$current_range_end" ]; then
+                    # echo "current_listen_port 在输入的范围内"
+                    listen_port="$input"
+                else
+                    echo "current_listen_port 不在输入的范围内, 请重新输入!"
+                    continue
+                fi
+            else
+                listen_port="$input"
+            fi
         else
             echo "输入有误, 请输入 1~65535 之间的数字或有效的端口范围!"
             continue
@@ -1563,6 +1582,9 @@ set_kcptun_config() {
 	do
 		cat >&1 <<-'EOF'
 		是否关闭数据压缩?
+		对CPU性能有损耗
+		如果是文本类数据，可设手动开启
+		如果是数据套壳，则默认保持关闭直接
 		EOF
 		read -p "(默认: ${nocomp}) [y/n]: " yn
 		if [ -n "$yn" ]; then
