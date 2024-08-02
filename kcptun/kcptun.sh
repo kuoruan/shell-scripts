@@ -74,7 +74,7 @@ D_KEEPALIVE=10
 
 # KCP新版支持
 D_SMUXVER=1
-D_STREAMBUF=4194304
+D_STREAMBUF=16777217
 # ======================
 
 # 当前选择的实例 ID
@@ -2042,14 +2042,14 @@ set_hidden_parameters() {
 		cat >&1 <<-'EOF'
 		请设置 streambuf 大小，官方文档介绍本值不宜过大
 		EOF
-		read -p "(单位: MB, 默认: $(expr ${smuxbuf} / 1024 / 1024)): " input
+		read -p "(单位: MB, 默认: $(expr ${streambuf} / 1024 / 1024)): " input
 		if [ -n "$input" ]; then
 			if ! is_number "$input" || [ $input -le 0 ]; then
 				echo "输入有误, 请输入大于0的数字!"
 				continue
 			fi
 
-			smuxbuf=$(expr $input \* 1024 \* 1024)
+			streambuf=$(expr $input \* 1024 \* 1024)
 		fi
 		break
 	done
