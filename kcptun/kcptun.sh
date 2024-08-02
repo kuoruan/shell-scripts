@@ -1201,22 +1201,32 @@ set_kcptun_config() {
 		cat >&1 <<-'EOF'
 		请输入 Kcptun 服务端运行端口 [1~65535]
 		这个端口就是 Kcptun 客户端连接的端口
+		新版支持端口范围，可输入[30000-35000]来开启端口范围3w-3w5
 		EOF
 		read -p "(默认: ${listen_port}): " input
-		if [ -n "$input" ]; then
-			if is_port "$input"; then
-				listen_port="$input"
-			else
-				echo "输入有误, 请输入 1~65535 之间的数字!"
-				continue
-			fi
-		fi
+    if [ -n "$input" ]; then
+        if echo "$input" | grep -qE '^[0-9]+-[0-9]+$'; then
+            range_start=$(echo "$input" | cut -d'-' -f1)
+            range_end=$(echo "$input" | cut -d'-' -f2)
+            if [ "$range_start" -le "$current_listen_port" ] && [ "$current_listen_port" -le "$range_end" ]; then
+                #echo "current_listen_port 在输入的范围内"
+                listen_port="$input"
+            else
+                echo "current_listen_port 不在输入的范围内, 请重新输入!"
+                continue
+            fi
+        elif is_port "$input"; then
+            listen_port="$input"
+        else
+            echo "输入有误, 请输入 1~65535 之间的数字或有效的端口范围!"
+            continue
+        fi
+    fi
 
-		if port_using "$listen_port" && \
-			[ "$listen_port" != "$current_listen_port" ]; then
-			echo "端口已被占用, 请重新输入!"
-			continue
-		fi
+    if port_using "$listen_port" && [ "$listen_port" != "$current_listen_port" ]; then
+        echo "端口已被占用, 请重新输入!"
+        continue
+    fi
 		break
 	done
 
