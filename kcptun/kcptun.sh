@@ -68,9 +68,13 @@ D_NODELAY=1
 D_INTERVAL=20
 D_RESEND=2
 D_NC=1
-D_SOCKBUF=4194304
-D_SMUXBUF=4194304
+D_SOCKBUF=16777217
+D_SMUXBUF=16777217
 D_KEEPALIVE=10
+
+# KCP新版支持，SMux默认为2，BUF大小改为16M
+D_SMUXVER=1
+D_STREAMBUF=16777217
 # ======================
 
 # 当前选择的实例 ID
@@ -1701,6 +1705,8 @@ set_kcptun_config() {
 		sockbuf=""
 		smuxbuf=""
 		keepalive=""
+		streambuf=""
+		smuxver=""
 		cat >&1 <<-EOF
 		---------------------------
 		不配置隐藏参数
@@ -2005,6 +2011,54 @@ set_hidden_parameters() {
 	keepalive = ${keepalive}
 	---------------------------
 	EOF
+
+	[ -z "$smuxver" ] && smuxver="$D_SMUXVER"
+	while true
+	do
+		cat >&1 <<-'EOF'
+		请设置 smux 的版本
+		EOF
+		read -p "(1,2, 默认值: ${smuxver}, 老版本默认1，新版本默认2): " input
+		if [ -n "$input" ]; then
+			if ! is_number "$input" || [ $input -le 0 ]; then
+				echo "输入有误, 请输入大于0的数字!"
+				continue
+			fi
+
+			smuxver=$input
+		fi
+		break
+	done
+
+	cat >&1 <<-EOF
+	---------------------------
+	$smuxver = ${smuxver}
+	---------------------------
+	EOF
+
+	[ -z "$streambuf" ] && streambuf="$D_STREAMBUF"
+	while true
+	do
+		cat >&1 <<-'EOF'
+		请设置 streambuf 大小，官方文档介绍本值不宜过大
+		EOF
+		read -p "(单位: MB, 默认: $(expr ${streambuf} / 1024 / 1024)): " input
+		if [ -n "$input" ]; then
+			if ! is_number "$input" || [ $input -le 0 ]; then
+				echo "输入有误, 请输入大于0的数字!"
+				continue
+			fi
+
+			streambuf=$(expr $input \* 1024 \* 1024)
+		fi
+		break
+	done
+
+	cat >&1 <<-EOF
+	---------------------------
+	streambuf = ${streambuf}
+	---------------------------
+	EOF
 }
 
 # 生成 Kcptun 服务端配置文件
@@ -2089,7 +2143,7 @@ gen_kcptun_config() {
 	}
 
 	write_configs_to_file "snmplog" "snmpperiod" "pprof" "acknodelay" "nodelay" \
-		"interval" "resend" "nc" "sockbuf" "smuxbuf" "keepalive"
+		"interval" "resend" "nc" "sockbuf" "smuxbuf" "keepalive" "streambuf" "smuxver"
 
 	if ! grep -q "^${run_user}:" '/etc/passwd'; then
 		(
@@ -2331,7 +2385,7 @@ show_current_instance_info() {
 
 	show_configs "key" "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
 		"parityshard" "dscp" "nocomp" "quiet" "tcp" "nodelay" "interval" "resend" \
-		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive"
+		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive" "streambuf" "smuxver"
 
 	show_version_and_client_url
 
@@ -2373,7 +2427,7 @@ show_current_instance_info() {
 
 	gen_client_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
 		"parityshard" "dscp" "nocomp" "quiet" "tcp" "nodelay" "interval" "resend" \
-		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive"
+		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive" "streambuf" "smuxver"
 
 	cat >&1 <<-EOF
 
@@ -2407,7 +2461,7 @@ show_current_instance_info() {
 
 	gen_mobile_configs "crypt" "mode" "mtu" "sndwnd" "rcvwnd" "datashard" \
 		"parityshard" "dscp" "nocomp" "quiet" "tcp" "nodelay" "interval" "resend" \
-		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive"
+		"nc" "acknodelay" "sockbuf" "smuxbuf" "keepalive" "streambuf" "smuxver"
 
 	cat >&1 <<-EOF
 
