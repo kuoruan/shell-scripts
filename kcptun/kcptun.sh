@@ -1747,9 +1747,22 @@ set_kcptun_config() {
 		unset_hidden_parameters
 	fi
 
-	if [ $listen_port -le 1024 ]; then
-		run_user="root"
-	fi
+  if echo "$input" | grep -qE '^[0-9]+-[0-9]+$'; then
+      range_start=$(echo "$input" | cut -d'-' -f1)
+      range_end=$(echo "$input" | cut -d'-' -f2)
+      if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && [ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && [ "$range_start" -le "$range_end" ]; then
+          # 新增端口段检测逻辑
+          if [ "$range_start" -le 1024 ] || [ "$range_end" -le 1024 ]; then
+              run_user="root"
+          fi
+      fi
+  elif is_port "$input"; then
+      listen_port="$input"
+      # 端口检测逻辑
+      if [ "$listen_port" -le 1024 ]; then
+          run_user="root"
+      fi
+  fi
 
 	echo "配置完成。"
 	any_key_to_continue
