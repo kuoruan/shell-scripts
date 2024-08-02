@@ -1209,7 +1209,6 @@ set_kcptun_config() {
             range_start=$(echo "$input" | cut -d'-' -f1)
             range_end=$(echo "$input" | cut -d'-' -f2)
             if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && [ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && [ "$range_start" -le "$range_end" ]; then
-                echo "$current_listen_port"
                 if echo "$current_listen_port" | grep -qE '^[0-9]+-[0-9]+$'; then
                     current_range_start=$(echo "$current_listen_port" | cut -d'-' -f1)
                     current_range_end=$(echo "$current_listen_port" | cut -d'-' -f2)
