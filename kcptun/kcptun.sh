@@ -1201,7 +1201,7 @@ set_kcptun_config() {
 		cat >&1 <<-'EOF'
 		请输入 Kcptun 服务端运行端口 [1~65535]
 		这个端口就是 Kcptun 客户端连接的端口
-		新版支持端口范围，可输入[30000-35000]来开启端口范围3w-3w5
+		新版支持端口范围，可输入[30000-35000]来开启端口范围
 		EOF
 		read -p "(默认: ${listen_port}): " input
     if [ -n "$input" ]; then
