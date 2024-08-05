@@ -12,8 +12,15 @@ $ tree
 
 ## Kcptun 一键安装脚本
 
-* 安装命令：
+* Ubuntu：
+```sh
+apt install python-is-python3 -y
+wget --no-check-certificate -O kcptun.sh https://github.com/kuoruan/shell-scripts/raw/master/kcptun/kcptun.sh
+sh kcptun.sh
+```
 
+
+* 其他Linux安装命令：
 ```sh
 wget --no-check-certificate -O kcptun.sh https://github.com/kuoruan/shell-scripts/raw/master/kcptun/kcptun.sh
 sh kcptun.sh

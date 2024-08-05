@@ -56,7 +56,7 @@ D_RCVWND=512
 D_DATASHARD=10
 D_PARITYSHARD=3
 D_DSCP=0
-D_NOCOMP='false'
+D_NOCOMP='true'
 D_QUIET='false'
 D_TCP='false'
 D_SNMPPERIOD=60
@@ -68,12 +68,13 @@ D_NODELAY=1
 D_INTERVAL=20
 D_RESEND=2
 D_NC=1
-D_SOCKBUF=16777217
-D_SMUXBUF=16777217
+# SMUX提高到64M提高SreamBuf效果
+D_SOCKBUF=67108868
+D_SMUXBUF=67108868
 D_KEEPALIVE=10
 
 # KCP新版支持，SMux默认为2，BUF大小改为16M
-D_SMUXVER=1
+D_SMUXVER=2
 D_STREAMBUF=16777217
 # ======================
 
@@ -1201,22 +1202,55 @@ set_kcptun_config() {
 		cat >&1 <<-'EOF'
 		请输入 Kcptun 服务端运行端口 [1~65535]
 		这个端口就是 Kcptun 客户端连接的端口
+		新版支持端口范围，可输入[30000-35000]来开启端口范围
 		EOF
 		read -p "(默认: ${listen_port}): " input
-		if [ -n "$input" ]; then
-			if is_port "$input"; then
-				listen_port="$input"
-			else
-				echo "输入有误, 请输入 1~65535 之间的数字!"
-				continue
-			fi
-		fi
+    if [ -n "$input" ]; then
+        if echo "$input" | grep -qE '^[0-9]+-[0-9]+$'; then
+            range_start=$(echo "$input" | cut -d'-' -f1)
+            range_end=$(echo "$input" | cut -d'-' -f2)
+            if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && [ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && [ "$range_start" -le "$range_end" ]; then
+                if echo "$current_listen_port" | grep -qE '^[0-9]+-[0-9]+$'; then
+                    current_range_start=$(echo "$current_listen_port" | cut -d'-' -f1)
+                    current_range_end=$(echo "$current_listen_port" | cut -d'-' -f2)
+                    if [ "$range_start" -le "$current_range_end" ] && [ "$range_end" -ge "$current_range_start" ]; then
+                        # echo "current_listen_port 在输入的范围内"
+                        listen_port="$input"
+                    else
+                        echo "current_listen_port 不在输入的范围内, 请重新输入!"
+                        continue
+                    fi
+                else
+                    listen_port="$input"
+                fi
+            else
+                echo "端口范围无效, 请输入类似 3000-5000 的有效端口范围!"
+                continue
+            fi
+        elif is_port "$input"; then
+            if echo "$current_listen_port" | grep -qE '^[0-9]+-[0-9]+$'; then
+                current_range_start=$(echo "$current_listen_port" | cut -d'-' -f1)
+                current_range_end=$(echo "$current_listen_port" | cut -d'-' -f2)
+                if [ "$input" -ge "$current_range_start" ] && [ "$input" -le "$current_range_end" ]; then
+                    # echo "current_listen_port 在输入的范围内"
+                    listen_port="$input"
+                else
+                    echo "current_listen_port 不在输入的范围内, 请重新输入!"
+                    continue
+                fi
+            else
+                listen_port="$input"
+            fi
+        else
+            echo "输入有误, 请输入 1~65535 之间的数字或有效的端口范围!"
+            continue
+        fi
+    fi
 
-		if port_using "$listen_port" && \
-			[ "$listen_port" != "$current_listen_port" ]; then
-			echo "端口已被占用, 请重新输入!"
-			continue
-		fi
+    if port_using "$listen_port" && [ "$listen_port" != "$current_listen_port" ]; then
+        echo "端口已被占用, 请重新输入!"
+        continue
+    fi
 		break
 	done
 
@@ -1548,6 +1582,9 @@ set_kcptun_config() {
 	do
 		cat >&1 <<-'EOF'
 		是否关闭数据压缩?
+		对CPU性能有损耗
+		如果是文本类数据，可设手动开启
+		如果是数据套壳，则默认保持关闭直接
 		EOF
 		read -p "(默认: ${nocomp}) [y/n]: " yn
 		if [ -n "$yn" ]; then
@@ -1732,9 +1769,22 @@ set_kcptun_config() {
 		unset_hidden_parameters
 	fi
 
-	if [ $listen_port -le 1024 ]; then
-		run_user="root"
-	fi
+  if echo "$input" | grep -qE '^[0-9]+-[0-9]+$'; then
+      range_start=$(echo "$input" | cut -d'-' -f1)
+      range_end=$(echo "$input" | cut -d'-' -f2)
+      if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && [ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && [ "$range_start" -le "$range_end" ]; then
+          # 新增端口段检测逻辑
+          if [ "$range_start" -le 1024 ] || [ "$range_end" -le 1024 ]; then
+              run_user="root"
+          fi
+      fi
+  elif is_port "$input"; then
+      listen_port="$input"
+      # 端口检测逻辑
+      if [ "$listen_port" -le 1024 ]; then
+          run_user="root"
+      fi
+  fi
 
 	echo "配置完成。"
 	any_key_to_continue
