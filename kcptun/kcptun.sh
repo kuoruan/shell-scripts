@@ -17,8 +17,8 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # 版本信息，请勿修改
 # =================
-SHELL_VERSION=25
-CONFIG_VERSION=6
+SHELL_VERSION=26
+CONFIG_VERSION=7
 INIT_VERSION=3
 # =================
 
