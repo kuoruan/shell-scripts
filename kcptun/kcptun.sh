@@ -224,7 +224,7 @@ get_os_info() {
 		[ -r /etc/photon-release ] && lsb_dist='photon'
 		[ -r /etc/os-release ] && lsb_dist="$(. /etc/os-release && echo "$ID")"
 	fi
-	
+
 
 	lsb_dist="$(echo "$lsb_dist" | tr '[:upper:]' '[:lower:]')"
 
@@ -1205,52 +1205,56 @@ set_kcptun_config() {
 		新版支持端口范围，可输入[30000-35000]来开启端口范围
 		EOF
 		read -p "(默认: ${listen_port}): " input
-    if [ -n "$input" ]; then
-        if echo "$input" | grep -qE '^[0-9]+-[0-9]+$'; then
-            range_start=$(echo "$input" | cut -d'-' -f1)
-            range_end=$(echo "$input" | cut -d'-' -f2)
-            if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && [ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && [ "$range_start" -le "$range_end" ]; then
-                if echo "$current_listen_port" | grep -qE '^[0-9]+-[0-9]+$'; then
-                    current_range_start=$(echo "$current_listen_port" | cut -d'-' -f1)
-                    current_range_end=$(echo "$current_listen_port" | cut -d'-' -f2)
-                    if [ "$range_start" -le "$current_range_end" ] && [ "$range_end" -ge "$current_range_start" ]; then
-                        # echo "current_listen_port 在输入的范围内"
-                        listen_port="$input"
-                    else
-                        echo "current_listen_port 不在输入的范围内, 请重新输入!"
-                        continue
-                    fi
-                else
-                    listen_port="$input"
-                fi
-            else
-                echo "端口范围无效, 请输入类似 3000-5000 的有效端口范围!"
-                continue
-            fi
-        elif is_port "$input"; then
-            if echo "$current_listen_port" | grep -qE '^[0-9]+-[0-9]+$'; then
-                current_range_start=$(echo "$current_listen_port" | cut -d'-' -f1)
-                current_range_end=$(echo "$current_listen_port" | cut -d'-' -f2)
-                if [ "$input" -ge "$current_range_start" ] && [ "$input" -le "$current_range_end" ]; then
-                    # echo "current_listen_port 在输入的范围内"
-                    listen_port="$input"
-                else
-                    echo "current_listen_port 不在输入的范围内, 请重新输入!"
-                    continue
-                fi
-            else
-                listen_port="$input"
-            fi
-        else
-            echo "输入有误, 请输入 1~65535 之间的数字或有效的端口范围!"
-            continue
-        fi
-    fi
 
-    if port_using "$listen_port" && [ "$listen_port" != "$current_listen_port" ]; then
-        echo "端口已被占用, 请重新输入!"
-        continue
-    fi
+		if [ -n "$input" ]; then
+			if echo "$input" | grep -qE '^[0-9]+-[0-9]+$'; then
+				range_start=$(echo "$input" | cut -d'-' -f1)
+				range_end=$(echo "$input" | cut -d'-' -f2)
+
+				if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && \
+					[ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && \
+					[ "$range_start" -le "$range_end" ]; then
+					if echo "$current_listen_port" | grep -qE '^[0-9]+-[0-9]+$'; then
+						current_range_start=$(echo "$current_listen_port" | cut -d'-' -f1)
+						current_range_end=$(echo "$current_listen_port" | cut -d'-' -f2)
+
+						if [ "$range_start" -le "$current_range_end" ] && [ "$range_end" -ge "$current_range_start" ]; then
+							listen_port="$input"
+						else
+							echo "当前监听端口范围不在输入的范围内, 请重新输入!当前范围：${current_listen_port}"
+							continue
+						fi
+					else
+						listen_port="$input"
+					fi
+				else
+					echo "端口范围无效, 请输入类似 3000-5000 的有效端口范围!"
+					continue
+				fi
+			elif is_port "$input"; then
+				if echo "$current_listen_port" | grep -qE '^[0-9]+-[0-9]+$'; then
+					current_range_start=$(echo "$current_listen_port" | cut -d'-' -f1)
+					current_range_end=$(echo "$current_listen_port" | cut -d'-' -f2)
+
+					if [ "$input" -ge "$current_range_start" ] && [ "$input" -le "$current_range_end" ]; then
+						listen_port="$input"
+					else
+						echo "输入的端口不在当前监听端口范围内, 请重新输入!当前范围：${current_listen_port}"
+						continue
+					fi
+				else
+					listen_port="$input"
+				fi
+			else
+				echo "输入有误, 请输入 1~65535 之间的数字或有效的端口范围!"
+				continue
+			fi
+		fi
+
+		if port_using "$listen_port" && [ "$listen_port" != "$current_listen_port" ]; then
+			echo "端口已被占用, 请重新输入!"
+			continue
+		fi
 		break
 	done
 
@@ -1769,22 +1773,25 @@ set_kcptun_config() {
 		unset_hidden_parameters
 	fi
 
-  if echo "$input" | grep -qE '^[0-9]+-[0-9]+$'; then
-      range_start=$(echo "$input" | cut -d'-' -f1)
-      range_end=$(echo "$input" | cut -d'-' -f2)
-      if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && [ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && [ "$range_start" -le "$range_end" ]; then
-          # 新增端口段检测逻辑
-          if [ "$range_start" -le 1024 ] || [ "$range_end" -le 1024 ]; then
-              run_user="root"
-          fi
-      fi
-  elif is_port "$input"; then
-      listen_port="$input"
-      # 端口检测逻辑
-      if [ "$listen_port" -le 1024 ]; then
-          run_user="root"
-      fi
-  fi
+	if echo "$input" | grep -qE '^[0-9]+-[0-9]+$'; then
+		range_start=$(echo "$input" | cut -d'-' -f1)
+		range_end=$(echo "$input" | cut -d'-' -f2)
+
+		if [ "$range_start" -ge 1 ] && [ "$range_start" -le 65535 ] && \
+			[ "$range_end" -ge 1 ] && [ "$range_end" -le 65535 ] && \
+			[ "$range_start" -le "$range_end" ]; then
+			# 新增端口段检测逻辑
+			if [ "$range_start" -le 1024 ] || [ "$range_end" -le 1024 ]; then
+				run_user="root"
+			fi
+		fi
+	elif is_port "$input"; then
+		listen_port="$input"
+		# 端口检测逻辑
+		if [ "$listen_port" -le 1024 ]; then
+			run_user="root"
+		fi
+	fi
 
 	echo "配置完成。"
 	any_key_to_continue
